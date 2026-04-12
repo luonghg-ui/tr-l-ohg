@@ -47,9 +47,10 @@
         /* ── HEADER (GLASS) ── */
         .top-bar {
             position: sticky; top: 0; z-index: 1000;
-            background: rgba(3, 7, 18, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid var(--border); padding: 0 40px;
-            display: flex; align-items: center; justify-content: space-between; height: 80px;
+            background: rgba(3, 7, 18, 0.8); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--border); padding: 0 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            min-height: 72px; flex-wrap: wrap; gap: 8px;
         }
 
         .brand { display: flex; align-items: center; gap: 16px; }
@@ -302,7 +303,43 @@
         .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) { .top-bar { padding: 0 20px; } .stats-row { grid-template-columns: 1fr 1fr; } .toolbar { flex-direction: column; align-items: stretch; } .top-bar h1 { font-size: 1.1rem; } .nav-link span { display: none; } }
+
+        /* ── TABLET ── */
+        @media (max-width: 768px) {
+            .top-bar { padding: 10px 16px; min-height: auto; }
+            .brand-text p { display: none; }
+            .nav-link span { display: none; }
+            .nav-link { padding: 9px 12px; }
+            .btn-refresh span { display: none; }
+            .btn-refresh { padding: 9px 12px; }
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 14px; }
+            .stat-value { font-size: 2.2rem; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .page-wrapper { padding: 20px 14px; }
+        }
+
+        /* ── MOBILE ── */
+        @media (max-width: 480px) {
+            .top-bar { padding: 8px 12px; gap: 6px; }
+            .brand-icon { width: 36px; height: 36px; font-size: 18px; }
+            .brand-text h1 { font-size: 1rem; }
+            .header-nav { gap: 6px; }
+            .nav-link { padding: 8px 10px; border-radius: 10px; }
+            .nav-link i { font-size: 16px; }
+            .btn-refresh { padding: 8px 10px; border-radius: 10px; gap: 0; }
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+            .stat-card { padding: 18px 14px; min-height: 140px; }
+            .stat-icon { width: 40px; height: 40px; font-size: 20px; }
+            .stat-value { font-size: 2rem; }
+            .stat-label { font-size: 0.65rem; }
+            .toolbar { padding: 16px; gap: 10px; }
+            .table-scroll { max-height: 55vh; }
+            .modal-key-fields { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .modal-key-value { font-size: 2rem; }
+            .modal-product-name { font-size: 1.1rem; }
+            .modal-box { max-width: 100%; border-radius: 20px; }
+            .page-wrapper { padding: 14px 10px; }
+        }
     </style>
 </head>
 

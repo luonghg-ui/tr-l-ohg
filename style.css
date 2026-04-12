@@ -45,12 +45,14 @@ body {
 
 .chat-header {
     background: #ffffff;
-    padding: 20px;
+    padding: 14px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
     z-index: 10;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .header-info {
@@ -79,12 +81,15 @@ body {
 }
 
 .status {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 6px;
-    white-space: nowrap; /* Prevent multi-line wrap */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
 }
 
 .status-dot {
@@ -355,9 +360,21 @@ body {
 
 @media (max-width: 600px) {
     .chatbot-container {
+        width: 100%;
         height: 100vh;
         max-height: 100vh;
         border-radius: 0;
         border: none;
     }
+    .chat-header { padding: 10px 14px; }
+    .bot-avatar { width: 40px; height: 40px; font-size: 20px; border-radius: 12px; }
+    .bot-details h1 { font-size: 0.95rem; }
+    .status { font-size: 0.7rem; max-width: 140px; }
+}
+
+@media (max-width: 420px) {
+    .bot-details h1 { font-size: 0.9rem; }
+    .status span:not(.status-dot) { display: none; } /* Chỉ giữ dot, ẩn chữ */
+    .chat-body { padding: 16px 12px; }
+    .chat-footer { padding: 12px; }
 }

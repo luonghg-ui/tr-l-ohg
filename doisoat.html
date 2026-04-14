@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đối Soát Sản Lượng Vender – Kho Thuocsi</title>
+    <meta name="description" content="Hệ thống đối soát sản lượng vender, quản lý SKU và vi phạm thời gian thực.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="mesh-bg"></div>
+
+    <header class="top-bar">
+        <div class="brand">
+            <div class="brand-icon"><i class='bx bx-check-shield'></i></div>
+            <div class="brand-text">
+                <h1>Đối Soát Vender</h1>
+                <p>Quản lý sản lượng & vi phạm</p>
+            </div>
+        </div>
+        <nav class="header-nav">
+            <a href="index.html" class="nav-link">
+                <i class='bx bx-bot'></i>
+                <span>Trợ Lý</span>
+            </a>
+            <a href="data-pa.html" class="nav-link">
+                <i class='bx bx-table'></i>
+                <span>PA</span>
+            </a>
+            <a href="data-missing.html" class="nav-link">
+                <i class='bx bx-data'></i>
+                <span>Missing</span>
+            </a>
+            <a href="doisoat.html" class="nav-link active">
+                <i class='bx bx-shield-quarter'></i>
+                <span>Đối Soát</span>
+            </a>
+            <button class="btn-refresh-mini" id="refreshBtn" title="Làm mới dữ liệu">
+                <i class='bx bx-refresh'></i>
+            </button>
+        </nav>
+    </header>
+
+    <div class="page-wrapper">
+        <div class="reconcile-header">
+            <h2 class="reconcile-title">Đối soát sản lượng của vender</h2>
+            <button class="btn-refresh-cards" id="refreshCardsBtn"><i class='bx bx-sync'></i></button>
+        </div>
+
+        <div class="vendor-grid" id="vendorGrid">
+            <!-- Skeleton Cards -->
+            <div class="vendor-card"><div class="stat-value">...</div></div>
+            <div class="vendor-card"><div class="stat-value">...</div></div>
+            <div class="vendor-card"><div class="stat-value">...</div></div>
+        </div>
+
+        <div class="toolbar" style="margin-top: 40px; margin-bottom: 20px;">
+            <div class="search-wrap">
+                <i class='bx bx-search'></i>
+                <input type="text" id="searchInput" placeholder="Nhập họ và tên nhân viên để tra cứu...">
+            </div>
+            <div class="result-badge" id="resultBadge">Sẵn sàng</div>
+        </div>
+
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Ngày</th>
+                            <th>Họ và tên</th>
+                            <th>Mã NV</th>
+                            <th>Bộ phận</th>
+                            <th>Ca làm</th>
+                            <th>Sản lượng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" style="padding:40px; text-align:center; color:var(--text-dim);">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination-wrap" id="paginationWrap" style="display:none;">
+                <div class="page-info" id="pageInfo"></div>
+                <div class="page-btns" id="pageBtns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" style="max-width: 520px;">
+            <button class="modal-close" id="modalCloseBtn"><i class='bx bx-x'></i></button>
+            <div class="modal-body" style="padding: 28px 36px 36px;">
+                <div id="reconcileDetailContent">
+                    <!-- Dynamic Content injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusBanner" style="display:none;">
+        <div class="banner loading" id="bannerInner">
+            <i class='bx bx-loader-alt bx-spin'></i>
+            <span>Đang đồng bộ dữ liệu...</span>
+        </div>
+    </div>
+
+    <script src="script-doisoat.js"></script>
+</body>
+
+</html>

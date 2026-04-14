@@ -30,7 +30,8 @@ function escapeHTML(str) {
             '<': '&lt;',
             '>': '&gt;',
             "'": '&#39;',
-            '"': '&quot;'
+            '"': '&quot;',
+            '\\': '&#92;'
         }[tag])
     );
 }
@@ -178,8 +179,15 @@ function processGvizData(json) {
             updateSystemMessage('⚠️ Sheet được tải thành công nhưng không có dòng dữ liệu nào. Hãy kiểm tra lại nội dung.');
         } else {
             updateSystemMessage(
-                `✅ Đã tải thành công <b>${inventoryData.length.toLocaleString('vi-VN')}</b> sản phẩm từ kho.<br>` +
-                `Nhập <b>MÃ SKU</b> hoặc <b>Tên sản phẩm</b> để tra cứu nhé!`
+                `<div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:40px; height:40px; background:rgba(16,185,129,0.1); color:#10B981; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">
+                        <i class='bx bx-check-double'></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700; font-size:0.9rem;">Hệ thống đã sẵn sàng</div>
+                        <div style="font-size:0.8rem; color:var(--text-dim);">Đã tải <b>${inventoryData.length.toLocaleString('vi-VN')}</b> sản phẩm từ kho.</div>
+                    </div>
+                </div>`
             );
         }
 
@@ -339,30 +347,65 @@ function renderResults(results) {
             : 'https://placehold.co/80x80/e0e7ff/4F46E5?text=No+Img';
         const keDisplay = ke && ke !== '#N/A' && ke.trim() !== '' ? ke : 'Chưa xếp kệ';
         const stockNum = parseInt(tonKho) || 0;
-        const stockColor = stockNum <= 0 ? '#EF4444' : '#10B981';
+        const stockColor = stockNum <= 0 ? '#F87171' : (stockNum <= 10 ? '#FCD34D' : '#34D399');
+        
+        // Fields for additional details section
+        const maSeller = getVal(['MÃ SELLER', 'MA SELLER', 'SELLER', 'VENDOR']);
+        const nhom = getVal(['NHÓM', 'NHOM', 'CATEGORY', 'GROUP']);
+        const adminId = getVal(['ADMIN ID', 'ADMIN', 'OWNER']);
+        const choNhap = getVal(['CHỜ NHẬP', 'CHO NHAP', 'PENDING', 'DUE']);
 
         html += `
         <div class="product-card">
             <div class="product-card-header">
                 <img src="${escapeHTML(hinhAnh)}" alt="${escapeHTML(tenSp)}" class="product-img"
-                     onerror="this.src='https://placehold.co/80x80/e0e7ff/4F46E5?text=Error'">
-                <div>
+                     onerror="this.src='https://placehold.co/80x80/030712/6366F1?text=Error'">
+                <div style="flex:1;">
                     <h3 class="product-title">${escapeHTML(tenSp)}</h3>
-                    <span class="product-sku">SKU: ${escapeHTML(sku)}</span>
+                    <span class="product-sku">${escapeHTML(sku)}</span>
                 </div>
             </div>
             <div class="product-info-grid">
                 <div class="info-item highlight">
                     <span class="info-label">Tồn Kho</span>
-                    <span class="info-value" style="color:${stockColor}">${escapeHTML(tonKho) || '0'}</span>
+                    <span class="info-value" style="color:${stockColor}">
+                        <i class='bx bx-package'></i> ${escapeHTML(tonKho) || '0'}
+                    </span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Vị Trí Kệ</span>
-                    <span class="info-value"><i class='bx bx-map'></i> ${escapeHTML(keDisplay)}</span>
+                    <span class="info-value" style="color:#818CF8;">
+                        <i class='bx bx-map-pin'></i> ${escapeHTML(keDisplay)}
+                    </span>
                 </div>
                 <div class="info-item" style="grid-column: span 2;">
-                    <span class="info-label">Quy Cách</span>
-                    <span class="info-value" style="font-size:0.85rem; color:#4B5563;">${escapeHTML(quyCach) || 'N/A'}</span>
+                    <span class="info-label">Quy Cách Sản Phẩm</span>
+                    <div style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">
+                        ${escapeHTML(quyCach) || 'N/A'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Details Section -->
+            <div class="extra-details">
+                <span class="extra-title">Chi tiết bổ sung</span>
+                <div class="detail-list">
+                    <div class="detail-row">
+                        <span class="detail-label">Mã seller</span>
+                        <span class="detail-value">${escapeHTML(maSeller) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Nhóm</span>
+                        <span class="detail-value">${escapeHTML(nhom) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Admin ID</span>
+                        <span class="detail-value">${escapeHTML(adminId) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Chờ nhập</span>
+                        <span class="detail-value" style="color:#FCD34D;">${escapeHTML(choNhap) || '—'}</span>
+                    </div>
                 </div>
             </div>
         </div>`;

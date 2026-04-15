@@ -395,11 +395,11 @@ function openModal(idx) {
         <div class="modal-key-card accent-green"><div class="modal-key-label">Tổng Tồn</div><div class="modal-key-value">${s}</div></div>
     </div>${bHtml}${otherHtml ? `<div class="modal-section-title">Thông Tin Khác</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">${otherHtml}</div>` : ''}`;
 
-    modalOverlay.classList.add('active');
+    modalOverlay.classList.add('open');
     document.body.style.overflow = 'hidden';
 }
 
-function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }
+function closeModal() { modalOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 
 modalCloseBtn.onclick = closeModal;
 modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };

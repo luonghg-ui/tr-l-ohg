@@ -827,3 +827,103 @@ td.text-act { color: #38BDF8; font-weight: 700; font-size: 1.1rem; }
 }
 .banner.loading { background: rgba(30,41,59,0.9); color: #94A3B8; }
 .banner.error { background: rgba(127,29,29,0.9); color: #FCA5A5; border-color: rgba(239,68,68,0.3); }
+
+/* ═══════════════════════════════════════════════════════
+   CLICKABLE RECONCILE ITEMS — Drill-Down Indicator
+═══════════════════════════════════════════════════════ */
+.reconcile-item.clickable { cursor: pointer; }
+.reconcile-item.clickable:hover {
+    background: rgba(15,23,42,0.85);
+    transform: translateX(6px);
+    border-color: rgba(255,255,255,0.15);
+}
+.reconcile-chevron {
+    font-size: 22px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    transition: transform 0.25s, color 0.25s;
+}
+.reconcile-item.clickable:hover .reconcile-chevron {
+    transform: translateX(4px);
+    color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRILL-DOWN VIEW — Employee Detail Table
+═══════════════════════════════════════════════════════ */
+
+/* Back button */
+.modal-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted); font-size: 0.8rem; font-weight: 600;
+    font-family: var(--font-display); padding: 8px 16px; border-radius: 100px;
+    cursor: pointer; transition: all 0.25s; margin-bottom: 20px;
+}
+.modal-back-btn:hover { background: rgba(99,102,241,0.15); color: #818CF8; border-color: rgba(99,102,241,0.4); }
+.modal-back-btn i { font-size: 16px; }
+
+/* Drill header */
+.drill-header { padding: 0; }
+.drill-title-wrap { text-align: center; margin-bottom: 24px; }
+.drill-title {
+    font-family: var(--font-display); font-size: 1.5rem; font-weight: 800;
+    color: #fff; letter-spacing: -0.02em; margin-bottom: 6px;
+}
+.drill-title-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin-bottom: 6px;
+}
+.drill-title-row .drill-title { margin-bottom: 0; }
+.drill-total-badge {
+    font-family: var(--font-display); font-size: 0.88rem; font-weight: 700;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    padding: 4px 12px; border-radius: 100px;
+    display: flex; align-items: center; gap: 5px;
+}
+.drill-sub {
+    font-size: 0.7rem; color: var(--text-dim); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* Drill-down table container — scrollable */
+.drill-table-wrap {
+    overflow-x: auto; overflow-y: auto;
+    max-height: 52vh; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(8,12,26,0.6);
+}
+.drill-table-wrap::-webkit-scrollbar { width: 5px; height: 5px; }
+.drill-table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+/* Drill-down table */
+.drill-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.drill-table thead th {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(20,30,55,0.98);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--font-display); font-size: 0.65rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    white-space: nowrap;
+}
+.drill-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.2s;
+}
+.drill-table tbody tr:hover { background: rgba(99,102,241,0.07); }
+.drill-table tbody td {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: var(--text);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.drill-table tbody tr:last-child { border-bottom: none; }
+
+/* Widen modal when drill-down is active */
+.modal-box.drill-mode {
+    max-width: 720px !important;
+    transition: max-width 0.35s cubic-bezier(0.4,0,0.2,1);
+}

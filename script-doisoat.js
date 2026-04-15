@@ -2,19 +2,24 @@
 // CONFIGURATION: Google Sheets Data
 // ============================================================
 const SHEET_ID = '1Atqwv9UdG_Ro_CBbamctGENgf-ZiUl73NrQeOaQFbK4';
-const GID_PROD = '2012066668'; // Dữ liệu đối soát 
+const GID_PROD = '2012066668'; // Dữ liệu đối soát
 
-// GViz URL
-const GVIZ_PROD_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID_PROD}`;
+// GViz URLs
+const GVIZ_PROD_URL    = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID_PROD}`;
+// Sheet "Danh sách lỗi vi phạm" – chứa cột K: Số tiền phạt
+const GVIZ_PENALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Danh%20s%C3%A1ch%20l%E1%BB%97i%20vi%20ph%E1%BA%A1m`;
 
 // ============================================================
 // STATE MANAGEMENT
 // ============================================================
 let productionData = [];
+let penaltyData    = [];   // rows from Danh sách lỗi vi phạm
 let vendorAggr = {};
 let filteredData = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 30;
+let _prodLoaded    = false;
+let _penaltyLoaded = false;
 
 // ============================================================
 // KEYWORD MAPPING (Adopted from script-pa.js for robustness)
@@ -27,6 +32,8 @@ const KEY_FIELDS = {
     output:  ['SẢN LƯỢNG', 'SAN LUONG', 'QUANTITY', 'OUTPUT'],
     date:    ['NGÀY', 'NGAY', 'DATE'],
     penalty: ['SỐ TIỀN PHẠT', 'SO TIEN PHAT', 'SỐ TIỀN PH', 'PHAT', 'PENALTY', 'TIỀN PHẠT'],
+    timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN'],
+    timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT'],
 };
 
 // ============================================================
@@ -76,21 +83,54 @@ function setupEventListeners() {
 // ============================================================
 function fetchData() {
     showLoading(true, 'Đang đồng bộ dữ liệu đối soát...');
-    
+    _prodLoaded    = false;
+    _penaltyLoaded = false;
+
     // Clear old scripts if any
     const oldScripts = document.querySelectorAll('script[data-type="jsonp-gviz"]');
     oldScripts.forEach(s => s.remove());
 
-    const callbackName = 'gviz_reconcile_' + Date.now();
-    window[callbackName] = function(json) {
-        processProductionData(json);
-        delete window[callbackName];
-    };
+    const ts = Date.now();
 
+    // --- Sheet 1: Dữ liệu đối soát (sản lượng) ---
+    const cbProd = 'gviz_prod_' + ts;
+    window[cbProd] = function(json) {
+        parseSheetRows(json, rows => { productionData = rows; });
+        delete window[cbProd];
+        _prodLoaded = true;
+        tryFinalize();
+    };
+    appendScript(GVIZ_PROD_URL, cbProd);
+
+    // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
+    const cbPenalty = 'gviz_penalty_' + ts;
+    window[cbPenalty] = function(json) {
+        parseSheetRows(json, rows => { penaltyData = rows; });
+        delete window[cbPenalty];
+        _penaltyLoaded = true;
+        tryFinalize();
+    };
+    appendScript(GVIZ_PENALTY_URL, cbPenalty);
+}
+
+function appendScript(baseUrl, callbackName) {
     const script = document.createElement('script');
     script.setAttribute('data-type', 'jsonp-gviz');
-    script.src = `${GVIZ_PROD_URL}&tqx=out:json;responseHandler:${callbackName}`;
+    script.src = `${baseUrl}&tqx=out:json;responseHandler:${callbackName}`;
     document.body.appendChild(script);
+}
+
+function tryFinalize() {
+    if (!_prodLoaded || !_penaltyLoaded) return; // wait for both
+    try {
+        aggregateData();
+        applyFilter();
+        renderVendorCards();
+        showLoading(false);
+    } catch(err) {
+        console.error('Finalize error:', err);
+        showLoading(false);
+    }
 }
 
 function showLoading(isLoading, msg = '') {
@@ -106,45 +146,71 @@ function showLoading(isLoading, msg = '') {
 }
 
 // ============================================================
-// DATA PROCESSING
+// GViz DATE / TIME FORMATTER
+// Gviz returns raw dates as strings like "Date(2026,3,1)" (date)
+// or "Date(1899,11,30,17,0,0)" / "Date(2026,3,1,17,0,0)" (time/datetime)
+// If cell.f (formatted) is available we prefer that; otherwise we
+// parse the Date() string ourselves.
 // ============================================================
-function processProductionData(json) {
-    try {
-        if (!json || !json.table) throw new Error('Dữ liệu không hợp lệ hoặc không có quyền truy cập.');
+function formatGvizValue(raw, fmt) {
+    // Prefer the sheet's own formatted string
+    if (fmt && fmt.trim() !== '') return fmt.trim();
 
+    if (typeof raw === 'string' && raw.startsWith('Date(')) {
+        const parts = raw.slice(5, -1).split(',').map(Number);
+        if (parts.length >= 6) {
+            // Has time component → return HH:MM
+            const h = String(parts[3]).padStart(2, '0');
+            const m = String(parts[4]).padStart(2, '0');
+            return `${h}:${m}`;
+        } else if (parts.length >= 3) {
+            // Date only → DD/MM/YYYY (gviz months are 0-indexed)
+            const y  = parts[0];
+            const mo = String(parts[1] + 1).padStart(2, '0');
+            const d  = String(parts[2]).padStart(2, '0');
+            return `${d}/${mo}/${y}`;
+        }
+    }
+    return raw !== null && raw !== undefined ? raw.toString().trim() : '';
+}
+
+/**
+ * Parses gviz JSON response into an array of row objects.
+ * Stores both formatted string (.header) and raw value (.header__raw).
+ * @param {object} json - gviz JSON response
+ * @param {function} onSuccess - callback(rows[])
+ */
+function parseSheetRows(json, onSuccess) {
+    try {
+        if (!json || !json.table) {
+            console.warn('parseSheetRows: no table in response');
+            onSuccess([]);
+            return;
+        }
         const headers = json.table.cols.map(c => (c && c.label) ? c.label.trim() : '');
-        // DEBUG: open DevTools (F12) → Console to see column names
-        console.log('📋 GID Columns:', headers);
+        console.log('📋 Sheet Columns:', headers);
+
         const rows = (json.table.rows || []).map(r => {
             const item = {};
-            // Store both raw value and formatted value so penalty picks up pure numbers
             r.c.forEach((cell, i) => {
-                if (headers[i]) {
-                    const raw = cell ? cell.v : null;
-                    const fmt = cell ? (cell.f || '') : '';
-                    // Prefer raw numeric value for numeric cells, fallback to formatted then raw string
-                    if (raw !== null && raw !== undefined && raw !== '') {
-                        item[headers[i]] = fmt !== '' ? fmt : raw.toString().trim();
-                        item[headers[i] + '__raw'] = raw; // store raw separately
-                    } else {
-                        item[headers[i]] = '';
-                        item[headers[i] + '__raw'] = 0;
-                    }
+                if (!headers[i]) return;
+                const raw = cell ? cell.v : null;
+                const fmt = cell ? (cell.f || '') : '';
+                if (raw !== null && raw !== undefined && raw !== '') {
+                    item[headers[i]]          = formatGvizValue(raw, fmt);
+                    item[headers[i] + '__raw'] = raw;
+                } else {
+                    item[headers[i]]          = '';
+                    item[headers[i] + '__raw'] = 0;
                 }
             });
             return item;
         }).filter(item => Object.values(item).some(v => v !== '' && v !== null && v !== undefined));
 
-        productionData = rows;
-        aggregateData();
-        applyFilter();
-        renderVendorCards();
-        showLoading(false);
+        onSuccess(rows);
     } catch (err) {
-        console.error('Error processing data:', err);
-        showLoading(false, 'Lỗi: ' + err.message);
-        bannerInner.className = 'banner error';
-        statusBanner.style.display = 'block';
+        console.error('parseSheetRows error:', err);
+        onSuccess([]);
     }
 }
 
@@ -159,55 +225,65 @@ function getVal(item, fieldName) {
     return key ? item[key] : '';
 }
 
+function normalizeVendor(raw) {
+    const v = (raw || 'KHÁC').toUpperCase();
+    if (v.includes('VIN'))  return 'VIN';
+    if (v.includes('VIET') || v.includes('WROK')) return 'VIETWORK';
+    if (v.includes('BPD'))  return 'BPD';
+    return v;
+}
+
 function aggregateData() {
     vendorAggr = {};
-    
-    productionData.forEach(item => {
-        let vendor = (getVal(item, 'dept') || 'KHÁC').toUpperCase();
-        // Clean vendor name (standardize)
-        if (vendor.includes('VIN')) vendor = 'VIN';
-        if (vendor.includes('VIET') || vendor.includes('WROK')) vendor = 'VIETWORK';
-        if (vendor.includes('BPD')) vendor = 'BPD';
 
-        const shift = (getVal(item, 'shift') || '').toUpperCase();
+    // ── Step 1: Aggregate sản lượng từ sheet Dữ liệu đối soát ──
+    productionData.forEach(item => {
+        const vendor = normalizeVendor(getVal(item, 'dept'));
+        const shift  = (getVal(item, 'shift') || '').toUpperCase();
         const output = parseInt((getVal(item, 'output') || '0').toString().replace(/[^0-9]/g, '')) || 0;
 
-        // Penalty: try raw numeric value first (column K stores as number), fallback to string parse
-        const penaltyKey = Object.keys(item).find(k => !k.endsWith('__raw') && matchesKeyField(k, KEY_FIELDS.penalty));
-        let penalty = 0;
-        if (penaltyKey) {
-            const rawVal = item[penaltyKey + '__raw'];
-            if (typeof rawVal === 'number' && !isNaN(rawVal)) {
-                penalty = rawVal;
-            } else {
-                penalty = parseInt((item[penaltyKey] || '0').toString().replace(/[^0-9]/g, '')) || 0;
-            }
-        }
-
         if (!vendorAggr[vendor]) {
-            vendorAggr[vendor] = {
-                skuCount: 0,
-                caNgay: 0,
-                caDem: 0,
-                penalty: 0,
-                details: []
-            };
+            vendorAggr[vendor] = { skuCount: 0, caNgay: 0, caDem: 0, penalty: 0, details: [] };
         }
 
-        vendorAggr[vendor].skuCount += output; 
-        
-        // Ca ngày: Shift 1, Shift 2, HC
+        vendorAggr[vendor].skuCount += output;
+
         if (shift.includes('1') || shift.includes('2') || shift.includes('HC') || shift.includes('HÀNH CHÍNH')) {
             vendorAggr[vendor].caNgay += output;
         } else if (shift.includes('3') || shift.includes('ĐÊM') || shift.includes('DEM')) {
             vendorAggr[vendor].caDem += output;
         }
 
-        vendorAggr[vendor].penalty += penalty;
         vendorAggr[vendor].details.push(item);
     });
 
-    // DEBUG: check penalty sums per vendor
+    // ── Step 2: Aggregate số tiền phạt từ sheet Danh sách lỗi vi phạm ──
+    console.log('📌 penaltyData rows:', penaltyData.length);
+    penaltyData.forEach(item => {
+        // "Vị trí" column holds the vendor/dept info in this sheet
+        const vendor = normalizeVendor(getVal(item, 'dept'));
+
+        const penaltyKey = Object.keys(item).find(k => !k.endsWith('__raw') && matchesKeyField(k, KEY_FIELDS.penalty));
+        let penalty = 0;
+        if (penaltyKey) {
+            const rawVal = item[penaltyKey + '__raw'];
+            if (typeof rawVal === 'number' && !isNaN(rawVal) && rawVal > 0) {
+                penalty = rawVal;
+            } else {
+                penalty = parseFloat((item[penaltyKey] || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+            }
+        }
+
+        if (penalty <= 0) return; // skip rows with no penalty
+
+        // Ensure vendor bucket exists (may not have production data)
+        if (!vendorAggr[vendor]) {
+            vendorAggr[vendor] = { skuCount: 0, caNgay: 0, caDem: 0, penalty: 0, details: [] };
+        }
+        vendorAggr[vendor].penalty += penalty;
+    });
+
+    // DEBUG
     Object.entries(vendorAggr).forEach(([v, d]) =>
         console.log(`💰 ${v} → penalty: ${d.penalty}, caNgay: ${d.caNgay}, caDem: ${d.caDem}`)
     );
@@ -257,22 +333,27 @@ function openVendorDetail(vendor) {
             <div class="reconcile-detail-subtitle">Tổng hợp sản lượng &amp; phạt</div>
         </div>
         <div class="modal-separator"></div>
-        <div class="reconcile-item" style="--item-accent: #FCD34D;">
+
+        <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'day')">
             <div class="reconcile-icon day"><i class='bx bxs-sun'></i></div>
             <div class="reconcile-info">
                 <div class="reconcile-label">Ca ngày</div>
                 <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; CA 2</div>
             </div>
             <div class="reconcile-value day-val">${data.caNgay.toLocaleString('vi-VN')}</div>
+            <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
-        <div class="reconcile-item" style="--item-accent: #818CF8;">
+
+        <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'night')">
             <div class="reconcile-icon night"><i class='bx bxs-moon'></i></div>
             <div class="reconcile-info">
                 <div class="reconcile-label">Ca đêm</div>
                 <div class="reconcile-sub">CA 3 &nbsp;·&nbsp; CA ĐÊM</div>
             </div>
             <div class="reconcile-value night-val">${data.caDem.toLocaleString('vi-VN')}</div>
+            <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
+
         <div class="reconcile-item" style="--item-accent: #F87171;">
             <div class="reconcile-icon money"><i class='bx bx-money-withdraw'></i></div>
             <div class="reconcile-info">
@@ -282,13 +363,102 @@ function openVendorDetail(vendor) {
             <div class="reconcile-value penalty">${penaltyFormatted}</div>
         </div>
     `;
-    
+
+    document.querySelector('.modal-box').classList.remove('drill-mode');
     modalOverlay.classList.add('active');
 }
 
 function closeModal() {
     modalOverlay.classList.remove('active');
+    document.querySelector('.modal-box').classList.remove('drill-mode');
 }
+
+// ============================================================
+// DRILL-DOWN: Shift Employee Detail
+// ============================================================
+function showShiftDetail(vendor, shiftType) {
+    const isDay = shiftType === 'day';
+    const shiftLabel   = isDay ? 'Ca ngày' : 'Ca đêm';
+    const shiftIconCls = isDay ? 'day' : 'night';
+    const shiftBxIcon  = isDay ? 'bxs-sun' : 'bxs-moon';
+    const shiftColor   = isDay ? '#FCD34D' : '#818CF8';
+    const shiftSub     = isDay ? 'CA 1 · HC · CA 2' : 'CA 3 · CA ĐÊM';
+
+    const employees = productionData.filter(item => {
+        if (normalizeVendor(getVal(item, 'dept')) !== vendor) return false;
+        const s = (getVal(item, 'shift') || '').toUpperCase();
+        return isDay
+            ? (s.includes('1') || s.includes('2') || s.includes('HC') || s.includes('HÀNH CHÍNH'))
+            : (s.includes('3') || s.includes('ĐÊM') || s.includes('DEM'));
+    });
+
+    const hasTimeIn  = employees.some(i => getVal(i, 'timeIn'));
+    const hasTimeOut = employees.some(i => getVal(i, 'timeOut'));
+
+    // Tính tổng sản lượng
+    const totalOutput = employees.reduce((sum, item) => {
+        const raw = item[Object.keys(item).find(k => !k.endsWith('__raw') && matchesKeyField(k, KEY_FIELDS.output)) + '__raw'];
+        const val = typeof raw === 'number' ? raw : parseInt((getVal(item, 'output') || '0').toString().replace(/[^0-9]/g, '')) || 0;
+        return sum + val;
+    }, 0);
+
+    const theadExtra = `
+        ${hasTimeIn  ? '<th>Giờ vào</th>' : ''}
+        ${hasTimeOut ? '<th>Giờ ra</th>'  : ''}
+    `;
+
+    const rows = employees.map(item => {
+        const tIn  = hasTimeIn  ? `<td style="color:var(--text-muted);">${getVal(item, 'timeIn')  || '—'}</td>` : '';
+        const tOut = hasTimeOut ? `<td style="color:var(--text-muted);">${getVal(item, 'timeOut') || '—'}</td>` : '';
+        return `<tr>
+            <td style="font-size:0.78rem; color:var(--text-dim);">${getVal(item, 'date') || '—'}</td>
+            <td style="font-weight:700; color:#fff;">${getVal(item, 'name') || '—'}</td>
+            <td><span class="product-sku">${getVal(item, 'msnv') || '—'}</span></td>
+            <td><span class="badge-shelf" style="background:rgba(255,255,255,0.05); color:#fff;">${getVal(item, 'shift') || '—'}</span></td>
+            ${tIn}${tOut}
+            <td style="font-weight:800; color:${shiftColor}; font-size:1rem;">${getVal(item, 'output') || '0'}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim);">Không có dữ liệu</td></tr>`;
+
+    reconcileDetailContent.innerHTML = `
+        <div class="drill-header">
+            <button class="modal-back-btn" onclick="openVendorDetail('${vendor}')">
+                <i class='bx bx-arrow-back'></i> Quay lại
+            </button>
+            <div class="drill-title-wrap">
+                <div class="reconcile-icon ${shiftIconCls}" style="margin:0 auto 10px; width:48px; height:48px;">
+                    <i class='bx ${shiftBxIcon}'></i>
+                </div>
+                <div class="drill-title-row">
+                    <span class="drill-title">${shiftLabel}</span>
+                    <span class="drill-total-badge" style="color:${shiftColor};">
+                        Tổng sl: <b>${totalOutput.toLocaleString('vi-VN')}</b>
+                    </span>
+                </div>
+                <div class="drill-sub">${shiftSub} &nbsp;·&nbsp; <b style="color:#fff;">${employees.length}</b> nhân viên</div>
+            </div>
+        </div>
+        <div class="drill-table-wrap">
+            <table class="drill-table">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Họ và tên</th>
+                        <th>Mã NV</th>
+                        <th>Ca làm</th>
+                        ${theadExtra}
+                        <th>Sản lượng</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+    document.querySelector('.modal-box').classList.add('drill-mode');
+}
+
+window.showShiftDetail   = showShiftDetail;
+window.openVendorDetail  = openVendorDetail;
 
 // ============================================================
 // TABLE & FILTERS

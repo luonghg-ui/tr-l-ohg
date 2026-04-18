@@ -171,6 +171,38 @@ body {
 }
 .btn-refresh-mini:hover { background: var(--primary); transform: rotate(90deg); box-shadow: 0 0 20px var(--primary-glow); }
 
+.btn-sync {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+}
+
+.btn-sync:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-sync.syncing i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 .chat-body {
     flex: 1;
     overflow-y: auto;
@@ -676,8 +708,16 @@ td.text-act { color: #38BDF8; font-weight: 700; font-size: 1.1rem; }
 .vendor-card:hover::before { opacity: 1; }
 .vendor-card:hover::after { opacity: 1; }
 
+.vendor-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
 .vendor-badge {
-    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    display: inline-flex; align-items: center; gap: 6px;
     background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25);
     color: #818CF8; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em;
     text-transform: uppercase; padding: 4px 12px; border-radius: 100px;
@@ -961,4 +1001,65 @@ td.text-act { color: #38BDF8; font-weight: 700; font-size: 1.1rem; }
 .modal-box.drill-mode {
     max-width: 720px !important;
     transition: max-width 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+/* ═══════════════════════════════════════════════════════
+   EXPORT BUTTON STYLES
+   ═══════════════════════════════════════════════════════ */
+.btn-export-global {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 10px 20px;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-export-global:hover {
+    background: rgba(16, 185, 129, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+    border-color: #34D399;
+}
+
+.btn-export-global i {
+    font-size: 18px;
+}
+
+/* Card-level export button */
+.btn-export-card {
+    position: relative;
+    z-index: 10;
+    background: rgba(16, 185, 129, 0.1);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-export-card:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #34D399;
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.btn-export-card i {
+    font-size: 12px;
 }

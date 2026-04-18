@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 
 <body>
@@ -48,7 +51,12 @@
     <div class="page-wrapper">
         <div class="reconcile-header">
             <h2 class="reconcile-title">Đối soát sản lượng của vender</h2>
-            <button class="btn-refresh-cards" id="refreshCardsBtn"><i class='bx bx-sync'></i></button>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn-export-global" id="exportAllBtn" title="Xuất Excel tất cả">
+                    <i class='bx bxs-file-export'></i> Xuất excel
+                </button>
+                <button class="btn-refresh-cards" id="refreshCardsBtn"><i class='bx bx-sync'></i></button>
+            </div>
         </div>
 
         <div class="vendor-grid" id="vendorGrid">

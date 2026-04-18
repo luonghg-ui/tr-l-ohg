@@ -76,6 +76,11 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
+    
+    const exportAllBtn = document.getElementById('exportAllBtn');
+    if (exportAllBtn) {
+        exportAllBtn.addEventListener('click', () => exportAllVendorData());
+    }
 }
 
 // ============================================================
@@ -306,7 +311,12 @@ function renderVendorCards() {
         const card = document.createElement('div');
         card.className = 'vendor-card';
         card.innerHTML = `
-            <div class="vendor-badge"><i class='bx bx-buildings'></i>VENDOR</div>
+            <div class="vendor-card-header">
+                <div class="vendor-badge"><i class='bx bx-buildings'></i>VENDOR</div>
+                <button class="btn-export-card" title="Xuất Excel ${vendor}">
+                    <i class='bx bxs-file-export'></i> Xuất excel
+                </button>
+            </div>
             <div class="vendor-name">${vendor}</div>
             <div class="vendor-divider"></div>
             <div class="vendor-stats">
@@ -315,6 +325,13 @@ function renderVendorCards() {
             </div>
             <div class="hint-text"><i class='bx bx-mouse'></i> nhấn để xem chi tiết</div>
         `;
+        
+        // Cần tách event click của button và click của card
+        card.querySelector('.btn-export-card').onclick = (e) => {
+            e.stopPropagation();
+            exportVendorData(vendor);
+        };
+        
         card.onclick = () => openVendorDetail(vendor);
         vendorGrid.appendChild(card);
     });
@@ -517,6 +534,199 @@ function normalize(str) {
 
 // Export changePage for onclick
 window.changePage = changePage;
+
+// ============================================================
+// EXCEL EXPORT LOGIC (SheetJS)
+// ============================================================
+function exportAllVendorData() {
+    if (!productionData || productionData.length === 0) {
+        alert("Không có dữ liệu để xuất!");
+        return;
+    }
+
+    // Calculate Summary for All Vendors
+    let dayTotal = 0;
+    let nightTotal = 0;
+    let totalPenalty = 0;
+
+    Object.values(vendorAggr).forEach(v => {
+        dayTotal += v.caNgay;
+        nightTotal += v.caDem;
+        totalPenalty += v.penalty;
+    });
+
+    const summaryData = {
+        day: dayTotal,
+        night: nightTotal,
+        totalSku: dayTotal + nightTotal,
+        penalty: totalPenalty
+    };
+
+    exportToExcel(productionData, `Tong_San_Luong_Vender_${getTodayStr()}.xlsx`, summaryData);
+}
+
+function exportVendorData(vendor) {
+    const dataRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept')) === vendor);
+    if (dataRows.length === 0) {
+        alert(`Không có dữ liệu cho vender ${vendor}!`);
+        return;
+    }
+
+    // Get Summary for specific vendor
+    const vAggr = vendorAggr[vendor] || { caNgay: 0, caDem: 0, penalty: 0 };
+    const summaryData = {
+        day: vAggr.caNgay,
+        night: vAggr.caDem,
+        totalSku: vAggr.caNgay + vAggr.caDem,
+        penalty: vAggr.penalty
+    };
+
+    exportToExcel(dataRows, `San_Luong_${vendor}_${getTodayStr()}.xlsx`, summaryData);
+}
+
+/**
+ * Prepares and downloads a multi-sheet Excel file using ExcelJS for styling.
+ */
+async function exportToExcel(rows, fileName, summary) {
+    try {
+        const workbook = new ExcelJS.Workbook();
+        
+        // --- Sheet 1: Tổng số sku (Styled as per image) ---
+        const summarySheet = workbook.addWorksheet('Tổng số sku', {
+            views: [{ showGridLines: false }]
+        });
+        
+        // Define columns
+        summarySheet.columns = [
+            { width: 10 }, // A (STT)
+            { width: 40 }, // B (NỘI DUNG)
+            { width: 20 }  // C (SỐ LƯỢNG)
+        ];
+
+        // Row 2: Headers
+        const headerRow = summarySheet.getRow(2);
+        headerRow.values = ["STT", "NỘI DUNG", "SỐ LƯỢNG"];
+        headerRow.height = 30;
+        headerRow.eachCell((cell, colNumber) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF76933C' } // Olive Green (matches your image better)
+            };
+            cell.font = { name: 'Arial', bold: false, size: 11, color: { argb: 'FF000000' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
+
+        // Row 3: PICK CA 1, 2, HC
+        const row3 = summarySheet.getRow(3);
+        row3.values = [1, "PICK CA 1 ,2,HC", summary.day || 0];
+        row3.height = 25;
+        row3.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { 
+                vertical: 'middle', 
+                horizontal: colNumber === 1 ? 'center' : (colNumber === 2 ? 'left' : 'right') 
+            };
+        });
+
+        // Row 4: PICK ĐÊM
+        const row4 = summarySheet.getRow(4);
+        row4.values = [2, "PICK ĐÊM", summary.night || 0];
+        row4.height = 25;
+        row4.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { 
+                vertical: 'middle', 
+                horizontal: colNumber === 1 ? 'center' : (colNumber === 2 ? 'left' : 'right') 
+            };
+        });
+
+        // Row 5: TỔNG SKU PICK
+        const row5 = summarySheet.getRow(5);
+        row5.values = ["", "TỔNG SKU PICK", summary.totalSku || 0];
+        row5.height = 25;
+        row5.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFC6E0B4' } // Light Green
+            };
+            cell.font = { bold: false };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { 
+                vertical: 'middle', 
+                horizontal: colNumber === 2 ? 'left' : (colNumber === 3 ? 'right' : 'center') 
+            };
+        });
+
+        // Row 6: TỔNG SỐ TIỀN PHẠT
+        const row6 = summarySheet.getRow(6);
+        row6.values = ["", "TỔNG SỐ TIỀN PHẠT", summary.penalty || 0];
+        row6.height = 25;
+        row6.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { 
+                vertical: 'middle', 
+                horizontal: colNumber === 2 ? 'left' : (colNumber === 3 ? 'right' : 'center') 
+            };
+        });
+
+        // --- Sheet 2: Chi tiết (Sheet1 old name) ---
+        const detailSheet = workbook.addWorksheet('Chi tiết');
+        detailSheet.columns = [
+            { header: 'Ngày', key: 'date', width: 15 },
+            { header: 'Mã NV', key: 'msnv', width: 15 },
+            { header: 'Họ tên', key: 'name', width: 25 },
+            { header: 'Bộ phận', key: 'dept', width: 20 },
+            { header: 'Ca làm', key: 'shift', width: 15 },
+            { header: 'Giờ vào', key: 'timeIn', width: 12 },
+            { header: 'Giờ ra', key: 'timeOut', width: 12 },
+            { header: 'Sản lượng thực tế', key: 'output', width: 18 }
+        ];
+
+        // Format detailed data rows
+        rows.forEach(item => {
+            detailSheet.addRow({
+                date: getVal(item, 'date'),
+                msnv: getVal(item, 'msnv'),
+                name: getVal(item, 'name'),
+                dept: getVal(item, 'dept'),
+                shift: getVal(item, 'shift'),
+                timeIn: getVal(item, 'timeIn'),
+                timeOut: getVal(item, 'timeOut'),
+                output: parseInt(getVal(item, 'output')) || 0
+            });
+        });
+
+        // Auto-filter and freeze top row for detail sheet
+        detailSheet.autoFilter = 'A1:H1';
+        detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+        // Write to buffer and trigger download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, fileName);
+
+    } catch (err) {
+        console.error("Export error:", err);
+        alert("Lỗi khi xuất file Excel!");
+    }
+}
+
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
+}
+
+// Export functions for global access
+window.exportAllVendorData = exportAllVendorData;
+window.exportVendorData = exportVendorData;
 
 // Start
 init();

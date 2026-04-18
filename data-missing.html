@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -39,6 +40,10 @@
                 <i class='bx bx-shield-quarter'></i>
                 <span>Đối Soát</span>
             </a>
+            <button class="btn-export-global" id="exportBtn" style="background:rgba(16,185,129,0.1); color:#34D399; border:1px solid rgba(16,185,129,0.3); padding:10px 20px; border-radius:12px; font-family:var(--font-display); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.3s; margin-right:12px;">
+                <i class='bx bxs-file-export'></i>
+                <span>Xuất Excel</span>
+            </button>
             <button class="btn-refresh" id="refreshBtn">
                 <i class='bx bx-refresh'></i>
                 <span>Làm mới tính toán</span>

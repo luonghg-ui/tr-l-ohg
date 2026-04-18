@@ -43,6 +43,10 @@
                     <i class='bx bx-shield-quarter'></i>
                     <span>Đối Soát</span>
                 </a>
+                <button class="btn-sync" id="syncDataBtn" title="Đồng bộ dữ liệu từ hệ thống">
+                    <i class='bx bx-sync'></i>
+                    <span>Cập nhật</span>
+                </button>
                 <button class="btn-refresh-mini" id="refreshDataBtn" title="Tải lại dữ liệu">
                     <i class='bx bx-refresh'></i>
                 </button>
@@ -72,7 +76,14 @@
             </form>
         </footer>
     </div>
+    <script src="script-sync.js"></script>
     <script src="script.js"></script>
+    <div id="statusBanner" style="display:none;">
+        <div class="banner loading" id="bannerInner">
+            <i class='bx bx-loader-alt bx-spin'></i>
+            <span>Đang xử lý...</span>
+        </div>
+    </div>
 </body>
 
 </html>

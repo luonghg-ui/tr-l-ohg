@@ -453,5 +453,46 @@ function getExpiryInfo(dateStr) {
     return { status: 'fresh', label: 'Hạn dùng tốt' };
 }
 
+// ============================================================
+// EXCEL EXPORT LOGIC
+// ============================================================
+function exportDataToExcel() {
+    const dataToExport = filtered.length > 0 ? filtered : allData;
+    if (dataToExport.length === 0) {
+        alert("Không có dữ liệu để xuất!");
+        return;
+    }
+
+    try {
+        const exportMap = dataToExport.map(item => {
+            const s = parseInt(getStock(item)) || 0;
+            return {
+                'Tên Sản Phẩm': getName(item),
+                'Mã SKU': getSKU(item),
+                'Tồn Kho': s,
+                'Vị Trí Kệ': getShelf(item),
+                'Quy Cách': getUnit(item),
+                'Ghi Chú': item['Ghi chú'] || item['GHI CHÚ'] || ''
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportMap);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Tồn Kho PA");
+        
+        const d = new Date();
+        const dateStr = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
+        XLSX.writeFile(workbook, `TonKho_PA_${dateStr}.xlsx`);
+    } catch (err) {
+        console.error("Export error:", err);
+        alert("Lỗi khi xuất file Excel!");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const exBtn = document.getElementById('exportBtn');
+    if (exBtn) exBtn.addEventListener('click', exportDataToExcel);
+});
+
 setupSort();
 fetchData();

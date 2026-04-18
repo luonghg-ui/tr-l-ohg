@@ -123,7 +123,11 @@ const KEY_FIELDS = {
     gap:     ['SỐ LƯỢNG CÒN LẠI', 'SO LUONG CON LAI', 'CHÊNH LỆCH'],
     name:    ['PRODUCT_NAME', 'TÊN SẢN PHẨM', 'SẢN PHẨM'],
     sku:     ['SKU_CODE', 'MÃ SKU', 'SKU'],
-    img:     ['HÌNH ẢNH','IMAGE']
+    img:     ['HÌNH ẢNH','IMAGE'],
+    money:   ['TỔNG SỐ TIỀN', 'TONG SO TIEN', 'SỐ TIỀN', 'SO TIEN'],
+    moneyOut:['SỐ TIỀN ĐÃ OUT', 'SO TIEN DA OUT'],
+    moneyRemain: ['SỐ TIỀN CÒN LẠI', 'SO TIEN CON LAI'],
+    location:['VỊ TRÍ', 'VI TRI']
 };
 
 function matchesKeyField(colName, keywords) {
@@ -137,6 +141,10 @@ function getVal(item, keywords) {
 
 function getName(item)  { return getVal(item, KEY_FIELDS.name); }
 function getSKU(item)   { return getVal(item, KEY_FIELDS.sku); }
+function getMoney(item) { return getVal(item, KEY_FIELDS.money); }
+function getMoneyOut(item) { return getVal(item, KEY_FIELDS.moneyOut); }
+function getMoneyRemain(item) { return getVal(item, KEY_FIELDS.moneyRemain); }
+function getLocation(item) { return getVal(item, KEY_FIELDS.location); }
 function getImg(item) {
     let img = getVal(item, KEY_FIELDS.img);
     if (!img || img === '#N/A' || img.trim() === '') {
@@ -166,6 +174,9 @@ function processData(json) {
             
             // PATCH: Xử lý cột bị merge / trống header trong file Google Sheet
             // Theo cấu trúc cột của user: K(10) là Số lượng mất, L(11) Đã out, M(12) Còn lại
+            if (!headers[7]) headers[7] = 'TỔNG SỐ TIỀN';
+            if (!headers[8]) headers[8] = 'SỐ TIỀN ĐÃ OUT';
+            if (!headers[9]) headers[9] = 'SỐ TIỀN CÒN LẠI';
             if (!headers[10]) headers[10] = 'SỐ LƯỢNG MẤT';
             if (!headers[11]) headers[11] = 'SỐ LƯỢNG ĐÃ OUT';
             if (!headers[12]) headers[12] = 'SỐ LƯỢNG CÒN LẠI';
@@ -205,13 +216,20 @@ function processData(json) {
             const rawGap = getVal(item, KEY_FIELDS.gap).replace(/,/g,'');
             const rowGap = rawGap !== '' ? parseFloat(rawGap) : (rowChecked - rowStock);
 
+            const rowMoney = parseFloat(getVal(item, KEY_FIELDS.money).replace(/,/g,'')) || 0;
+            const rowMoneyOut = parseFloat(getVal(item, KEY_FIELDS.moneyOut).replace(/,/g,'')) || 0;
+            const rowMoneyRemain = parseFloat(getVal(item, KEY_FIELDS.moneyRemain).replace(/,/g,'')) || 0;
+
             if (!groupedMap.has(key)) {
-                groupedMap.set(key, { ...item, _stock: 0, _checked: 0, _gapTotal: 0 });
+                groupedMap.set(key, { ...item, _stock: 0, _checked: 0, _gapTotal: 0, _moneyTotal: 0, _moneyOutTotal: 0, _moneyRemainTotal: 0 });
             }
             const entry = groupedMap.get(key);
             entry._stock += rowStock;
             entry._checked += rowChecked;
             entry._gapTotal += rowGap;
+            entry._moneyTotal += rowMoney;
+            entry._moneyOutTotal += rowMoneyOut;
+            entry._moneyRemainTotal += rowMoneyRemain;
         });
 
         allData = Array.from(groupedMap.values()).map(entry => {
@@ -368,27 +386,62 @@ function openModal(idx) {
             </div>
         </div>`;
 
+    const formatN = (num) => {
+        if (!num) return '0';
+        return num.toLocaleString('vi-VN');
+    };
+
+    const money = formatN(item._moneyTotal);
+    const moneyOut = formatN(item._moneyOutTotal);
+    const moneyRemain = formatN(item._moneyRemainTotal);
+    const loc = getLocation(item) || '—';
+
     modalBody.innerHTML = `
-    <div class="modal-key-fields">
-        <div class="modal-key-card">
-            <div class="modal-key-label">Số lượng cần kiểm</div>
-            <div class="modal-key-value text-sys">${item._sys}</div>
+    <div class="modal-new-blocks">
+        <div class="new-block bg-red">
+            <div class="new-block-label">Cần kiểm</div>
+            <div class="new-block-val">${item._sys}</div>
         </div>
-        <div class="modal-key-card accent-blue">
-            <div class="modal-key-label">Số lượng đã kiểm</div>
-            <div class="modal-key-value text-act">${item._act}</div>
+        <div class="new-block bg-yellow">
+            <div class="new-block-label">Đã kiểm</div>
+            <div class="new-block-val">${item._act}</div>
         </div>
-        <div class="modal-key-card ${isOk ? 'accent-green' : (isMissing ? 'accent-red' : 'accent-yellow')}">
-            <div class="modal-key-label">Còn lại</div>
-            <div class="modal-key-value" style="color: ${isOk ? '#34D399' : (isMissing ? '#F87171' : '#FCD34D')};">${item._gap}</div>
+        <div class="new-block bg-green">
+            <div class="new-block-label">Còn lại</div>
+            <div class="new-block-val">${item._gap}</div>
+        </div>
+    </div>
+    
+    <div class="modal-extra-section">
+        <h4 class="extra-title-text">Chi tiết bổ sung</h4>
+        
+        <div class="extra-row">
+            <span class="extra-lbl">Số tiền</span>
+            <div class="extra-line"></div>
+            <span class="extra-val">${money}</span>
+        </div>
+        <div class="extra-row">
+            <span class="extra-lbl">Số tiền đã Out</span>
+            <div class="extra-line"></div>
+            <span class="extra-val">${moneyOut}</span>
+        </div>
+        <div class="extra-row">
+            <span class="extra-lbl">Số tiền còn lại</span>
+            <div class="extra-line"></div>
+            <span class="extra-val">${moneyRemain}</span>
+        </div>
+        <div class="extra-row">
+            <span class="extra-lbl">Vị trí</span>
+            <div class="extra-line"></div>
+            <span class="extra-val">${loc}</span>
         </div>
     </div>`;
 
-    modalOverlay.classList.add('open');
+    modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
-function closeModal() { modalOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }
 
 modalCloseBtn.onclick = closeModal;
 modalOverlay.onclick = (e) => { if(e.target === modalOverlay) closeModal(); };

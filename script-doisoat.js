@@ -681,18 +681,37 @@ async function exportToExcel(rows, fileName, summary) {
         const detailSheet = workbook.addWorksheet('Chi tiết');
         detailSheet.columns = [
             { header: 'Ngày', key: 'date', width: 15 },
-            { header: 'Mã NV', key: 'msnv', width: 15 },
-            { header: 'Họ tên', key: 'name', width: 25 },
-            { header: 'Bộ phận', key: 'dept', width: 20 },
+            { header: 'Mã NV', key: 'msnv', width: 25 },
+            { header: 'Họ tên', key: 'name', width: 30 },
+            { header: 'Bộ phận', key: 'dept', width: 15 },
             { header: 'Ca làm', key: 'shift', width: 15 },
             { header: 'Giờ vào', key: 'timeIn', width: 12 },
             { header: 'Giờ ra', key: 'timeOut', width: 12 },
             { header: 'Sản lượng thực tế', key: 'output', width: 18 }
         ];
 
-        // Format detailed data rows
+        // Style the detail header (Row 1)
+        const detailHeader = detailSheet.getRow(1);
+        detailHeader.height = 30;
+        detailHeader.eachCell((cell) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF76933C' } // Olive Green
+            };
+            cell.font = { name: 'Arial', bold: false, size: 11, color: { argb: 'FF000000' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
+
+        // Add data and apply borders/alignment
         rows.forEach(item => {
-            detailSheet.addRow({
+            const row = detailSheet.addRow({
                 date: getVal(item, 'date'),
                 msnv: getVal(item, 'msnv'),
                 name: getVal(item, 'name'),
@@ -702,9 +721,29 @@ async function exportToExcel(rows, fileName, summary) {
                 timeOut: getVal(item, 'timeOut'),
                 output: parseInt(getVal(item, 'output')) || 0
             });
+            
+            row.height = 20;
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+                
+                // Set specific alignments for each column
+                let alignment = 'left';
+                if ([1, 4, 6, 7].includes(colNumber)) {
+                    alignment = 'center'; // Ngày, Bộ phận, Giờ vào, Giờ ra
+                } else if (colNumber === 8) {
+                    alignment = 'right'; // Sản lượng
+                }
+                
+                cell.alignment = { vertical: 'middle', horizontal: alignment };
+            });
         });
 
-        // Auto-filter and freeze top row for detail sheet
+        // Auto-filter and freeze top row
         detailSheet.autoFilter = 'A1:H1';
         detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
 

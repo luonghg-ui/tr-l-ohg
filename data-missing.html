@@ -53,22 +53,22 @@
 
     <div class="page-wrapper">
         <div class="stats-row">
-            <div class="stat-card">
+            <div class="stat-card" onclick="openCatModal('all')" style="cursor:pointer;">
                 <div class="stat-icon blue"><i class='bx bx-collection'></i></div>
                 <div class="stat-label">Tổng MÃ SKU</div>
                 <div class="stat-value" id="statTotalSKU">—</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" onclick="openCatModal('ok')" style="cursor:pointer;">
                 <div class="stat-icon green"><i class='bx bx-check-shield'></i></div>
                 <div class="stat-label">SKU Khớp Hoàn Toàn</div>
                 <div class="stat-value" id="statMatched">—</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" onclick="openCatModal('missing')" style="cursor:pointer;">
                 <div class="stat-icon red"><i class='bx bx-layer-minus'></i></div>
                 <div class="stat-label">SKU Thiếu (Missing)</div>
                 <div class="stat-value" id="statMissing">—</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" onclick="openCatModal('surplus')" style="cursor:pointer;">
                 <div class="stat-icon yellow"><i class='bx bx-layer-plus'></i></div>
                 <div class="stat-label">SKU Dư (Surplus)</div>
                 <div class="stat-value" id="statSurplus">—</div>
@@ -129,6 +129,15 @@
             <button class="modal-close" id="modalCloseBtn"><i class='bx bx-x'></i></button>
             <div class="modal-header" id="modalHeader"></div>
             <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- CATEGORY MODAL -->
+    <div class="modal-overlay" id="catModalOverlay">
+        <div class="modal-box" id="catModalBox" style="max-width: 900px;">
+            <button class="modal-close" id="catModalCloseBtn"><i class='bx bx-x'></i></button>
+            <div class="modal-header" style="flex-direction: column; align-items: stretch; padding-bottom: 24px;" id="catModalHeader"></div>
+            <div class="modal-body" id="catModalBody" style="padding: 0;"></div>
         </div>
     </div>
 

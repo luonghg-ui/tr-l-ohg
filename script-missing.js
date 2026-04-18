@@ -445,7 +445,156 @@ function closeModal() { modalOverlay.classList.remove('active'); document.body.s
 
 modalCloseBtn.onclick = closeModal;
 modalOverlay.onclick = (e) => { if(e.target === modalOverlay) closeModal(); };
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+// ============================================================
+// CATEGORY MODAL LOGIC
+// ============================================================
+const catModalOverlay = document.getElementById('catModalOverlay');
+const catModalHeader = document.getElementById('catModalHeader');
+const catModalBody = document.getElementById('catModalBody');
+const catModalCloseBtn = document.getElementById('catModalCloseBtn');
+
+catModalOverlay.onclick = (e) => { if(e.target === catModalOverlay) window.closeCatModal(); };
+catModalCloseBtn.onclick = window.closeCatModal;
+
+document.addEventListener('keydown', e => { 
+    if(e.key === 'Escape') {
+        closeModal();
+        if (window.closeCatModal) window.closeCatModal();
+    } 
+});
+
+let currentCatData = [];
+let currentCatType = '';
+
+window.openCatModal = function(type) {
+    currentCatType = type;
+    currentCatData = allData.filter(d => {
+        if (type === 'missing') return d._gap < 0;
+        if (type === 'surplus') return d._gap > 0;
+        if (type === 'ok') return d._gap === 0;
+        return true;
+    });
+
+    let title = 'Tổng MÃ SKU';
+    let iconHTML = `<div class="stat-icon blue" style="margin:0;"><i class='bx bx-collection'></i></div>`;
+    if (type === 'missing') {
+        title = 'SKU Thiếu (Missing)';
+        iconHTML = `<div class="stat-icon red" style="margin:0;"><i class='bx bx-layer-minus'></i></div>`;
+    } else if (type === 'surplus') {
+        title = 'SKU Dư (Surplus)';
+        iconHTML = `<div class="stat-icon yellow" style="margin:0;"><i class='bx bx-layer-plus'></i></div>`;
+    } else if (type === 'ok') {
+        title = 'SKU Khớp Hoàn Toàn';
+        iconHTML = `<div class="stat-icon green" style="margin:0;"><i class='bx bx-check-shield'></i></div>`;
+    }
+
+    let moneySum = 0;
+    currentCatData.forEach(d => moneySum += (d._moneyRemainTotal || 0));
+    const formatN = num => num ? num.toLocaleString('vi-VN') : '0';
+
+    catModalHeader.innerHTML = `
+        <div style="position:relative; width:100%; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:16px; margin-bottom: 8px;">
+            ${iconHTML.replace('style="margin:0;"', 'style="margin:0; width:64px; height:64px; font-size:32px;"')}
+            <div style="text-align:center;">
+                <div style="font-family:var(--font-display); font-size:1.4rem; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.02em;">${title}</div>
+                <div style="display:inline-flex; align-items:center; gap:16px; margin-top:12px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:100px; padding:6px 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);">
+                    <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Số tiền còn lại</span>
+                    <strong style="font-size:1.15rem; color:#fff; font-family:var(--font-display); text-shadow: 0 2px 10px rgba(255,255,255,0.2);">${formatN(moneySum)} đ</strong>
+                </div>
+            </div>
+            <button onclick="exportCatDataToExcel()" onmouseover="this.style.background='rgba(16,185,129,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(16,185,129,0.1)'; this.style.transform='translateY(0)';" style="position:absolute; right:45px; top:-12px; background:rgba(16,185,129,0.1); color:#34D399; border:1px solid rgba(16,185,129,0.3); padding:10px 20px; border-radius:14px; font-family:var(--font-display); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.3s; box-shadow: 0 4px 15px rgba(16,185,129,0.1);">
+                <i class='bx bxs-file-export' style="font-size:1.2rem;"></i> XUẤT EXCEL
+            </button>
+        </div>
+    `;
+
+    let rowsHTML = currentCatData.map((item, idx) => {
+        const _name = escapeHTML(getName(item)) || 'Không xác định';
+        const _sku = escapeHTML(getSKU(item)) || '—';
+        const img = getImg(item) || 'https://placehold.co/48x48/1e293b/4f46e5?text=?';
+        
+        let gapColor = '#34D399';
+        if (item._gap < 0) gapColor = '#F87171';
+        else if (item._gap > 0) gapColor = '#FCD34D';
+
+        return `
+            <tr>
+                <td style="color:var(--text-dim); text-align:center;">${idx + 1}</td>
+                <td class="td-img"><img src="${img}" onerror="this.src='https://placehold.co/48x48/1e293b/4f46e5?text=?'"></td>
+                <td>
+                    <div class="name-main">${_name}</div>
+                    <div class="name-sku">${_sku}</div>
+                </td>
+                <td class="text-sys" style="text-align:center;">${item._sys}</td>
+                <td class="text-act" style="text-align:center;">${item._act}</td>
+                <td style="text-align:center; font-weight:800; font-size:1.15rem; color:${gapColor}; font-family:var(--font-display);">${item._gap > 0 ? '+'+item._gap : item._gap}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (currentCatData.length === 0) {
+        rowsHTML = `<tr><td colspan="6" style="text-align:center; padding:50px; color:var(--text-dim); font-size:0.95rem;">Không có dữ liệu trong nhóm này.</td></tr>`;
+    }
+
+    catModalBody.innerHTML = `
+        <div class="table-wrap" style="background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); margin-top: 5px;">
+            <div class="table-scroll" style="max-height: 55vh;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:50px; text-align:center;">#</th>
+                            <th style="width:60px;"></th>
+                            <th>SẢN PHẨM / SKU</th>
+                            <th style="text-align:center;">CẦN KIỂM</th>
+                            <th style="text-align:center;">ĐÃ KIỂM</th>
+                            <th style="text-align:center;">CHƯA KIỂM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHTML}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    catModalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeCatModal = function() { 
+    catModalOverlay.classList.remove('active'); 
+    if (!modalOverlay.classList.contains('active')) {
+        document.body.style.overflow = ''; 
+    }
+};
+
+window.exportCatDataToExcel = function() {
+    if (currentCatData.length === 0) {
+        alert("Không có dữ liệu để xuất!");
+        return;
+    }
+    try {
+        const exportMap = currentCatData.map(item => ({
+            'Tên Sản Phẩm': getName(item),
+            'Mã SKU': getSKU(item),
+            'Cần Kiểm': item._sys,
+            'Đã Kiểm': item._act,
+            'Chênh Lệch': item._gap,
+            'Số tiền còn lại': item._moneyRemainTotal || 0
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(exportMap);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Chi Tiet");
+        const d = new Date();
+        const dateStr = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
+        XLSX.writeFile(workbook, `Detail_${currentCatType}_${dateStr}.xlsx`);
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi xuất file Excel!");
+    }
+};
 
 // ============================================================
 // UTILS

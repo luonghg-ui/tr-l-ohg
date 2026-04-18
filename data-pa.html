@@ -64,8 +64,8 @@
             top: 0;
             z-index: 1000;
             background: rgba(3, 7, 18, 0.8);
-            backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
+            backdrop-filter: blur(24px);
             border-bottom: 1px solid var(--border);
             padding: 0 32px;
             display: flex;
@@ -102,6 +102,7 @@
             letter-spacing: -0.01em;
             background: linear-gradient(to right, #fff, #94a3b8);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -213,8 +214,8 @@
 
         .stat-card {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
-            backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
@@ -324,8 +325,8 @@
         /* ── TOOLBAR ── */
         .toolbar {
             background: var(--surface-glass);
-            backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
             border: 1px solid var(--border);
             border-radius: var(--radius-xl);
             padding: 24px;
@@ -391,6 +392,7 @@
         /* ── TABLE ── */
         .table-wrap {
             background: var(--surface-glass);
+            -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);
             border: 1px solid var(--border);
             border-radius: var(--radius-xl);
@@ -433,6 +435,7 @@
             color: var(--text-muted);
             border-bottom: 1px solid var(--border);
             cursor: pointer;
+            -webkit-user-select: none;
             user-select: none;
         }
 
@@ -568,8 +571,8 @@
             inset: 0;
             z-index: 2000;
             background: rgba(3, 7, 18, 0.75);
-            backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -585,8 +588,8 @@
 
         .modal-box {
             background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
+            backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 28px;
             width: 100%;
@@ -639,6 +642,7 @@
             margin-bottom: 10px;
             background: linear-gradient(to right, #ffffff, #94A3B8);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
         }
@@ -1240,13 +1244,13 @@
                 <i class='bx bx-search'></i>
                 <input type="text" id="searchInput" placeholder="Tìm theo SKU, tên sản phẩm hoặc vị trí kệ..." disabled>
             </div>
-            <select class="filter-select" id="stockFilter" disabled>
+            <select class="filter-select" id="stockFilter" title="Bộ lọc kho" disabled>
                 <option value="all">Tất cả trạng thái</option>
                 <option value="in">Còn hàng</option>
                 <option value="out">Hết hàng</option>
                 <option value="low">Tồn thấp (≤10)</option>
             </select>
-            <select class="filter-select" id="shelfFilter" disabled>
+            <select class="filter-select" id="shelfFilter" title="Bộ lọc kệ" disabled>
                 <option value="all">Tất cả vị trí</option>
             </select>
             <div class="result-badge" id="resultBadge">Sẵn sàng</div>

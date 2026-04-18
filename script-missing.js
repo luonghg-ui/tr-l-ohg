@@ -11,6 +11,8 @@ const ROWS_PER_PAGE = 30;
 let allData      = [];
 let filtered     = [];
 let auxImages    = new Map(); // SKU -> Image Map
+let outListNotOut = new Set();
+let outMissingSKUs = new Map();
 let sortCol      = 'gap';
 let sortDir      = 'asc';
 let currentPage  = 1;
@@ -70,8 +72,8 @@ function fetchData() {
     const cbMain = 'pa_missing_' + Date.now();
     window[cbMain] = (json) => {
         mainDone = true;
-        if (auxDone) finalizeData(json);
-        else window._pendingJson = json;
+        if (auxDone && outDone) finalizeData(window._pendingJson || json);
+        else if (!window._pendingJson) window._pendingJson = json;
     };
     const sMain = document.createElement('script');
     sMain.src = `${GVIZ_URL}&tqx=out:json;responseHandler:${cbMain}`;
@@ -83,13 +85,26 @@ function fetchData() {
     window[cbAux] = (json) => {
         auxDone = true;
         processAuxImages(json);
-        if (mainDone) finalizeData(window._pendingJson);
+        if (mainDone && outDone) finalizeData(window._pendingJson);
     };
     const sAux = document.createElement('script');
     const AUX_SHEET_ID = '10Oguigdpx5RWP4rV0Mw3eVdBrf-uS8ilQHKfA26GMw8'; // Master data file (chứa ảnh ở gid=0)
     sAux.src = `https://docs.google.com/spreadsheets/d/${AUX_SHEET_ID}/gviz/tq?gid=0&tqx=out:json;responseHandler:${cbAux}`;
     document.body.appendChild(sAux);
     jsonpScripts.push(sAux);
+
+    // 3. Fetch OUT sheet for true Not_Out checking
+    let outDone = false;
+    const cbOut = 'pa_out_' + Date.now();
+    window[cbOut] = (json) => {
+        outDone = true;
+        processOutData(json);
+        if (mainDone && auxDone) finalizeData(window._pendingJson);
+    };
+    const sOut = document.createElement('script');
+    sOut.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=OUT&tqx=out:json;responseHandler:${cbOut}`;
+    document.body.appendChild(sOut);
+    jsonpScripts.push(sOut);
 
     function finalizeData(json) {
         processData(json);
@@ -112,6 +127,59 @@ function processAuxImages(json) {
             if (sku && img && img !== '#N/A') auxImages.set(sku, img);
         });
     } catch(e) { console.error("Aux Image Error", e); }
+}
+
+function processOutData(json) {
+    try {
+        if (!json?.table?.rows) return;
+        const rows = json.table.rows;
+        
+        // Find indices dynamically from headers usually at row 0 or 1
+        let leftSkuIdx = 0;
+        let rightSkuIdx = 8; // fallback
+        
+        const headerRow = rows.find(r => r.c && r.c.some(c => c && typeof c.v === 'string' && (c.v.toUpperCase().trim() === 'MÃ SKU' || c.v.toUpperCase().trim() === 'SKU')));
+        if (headerRow) {
+            let firstSku = -1;
+            headerRow.c.forEach((c, idx) => {
+                if (c && typeof c.v === 'string' && (c.v.toUpperCase().trim() === 'MÃ SKU' || c.v.toUpperCase().trim() === 'SKU')) {
+                    if (firstSku === -1) firstSku = idx;
+                    else rightSkuIdx = idx;
+                }
+            });
+            if (firstSku !== -1) leftSkuIdx = firstSku;
+        }
+
+        let leftNameIdx = leftSkuIdx + 1;
+
+        let leftSKUs = new Map();
+        let rightSKUs = new Set();
+        
+        rows.forEach(r => {
+            if (!r.c) return;
+            let lSku = r.c[leftSkuIdx]?.v;
+            if (lSku) lSku = lSku.toString().trim().toLowerCase();
+            if (lSku && lSku !== 'mã sku' && lSku !== 'sku') {
+                let lName = r.c[leftNameIdx]?.v;
+                leftSKUs.set(lSku, lName ? lName.toString().trim() : '');
+            }
+            
+            let rSku = r.c[rightSkuIdx]?.v;
+            if (rSku) rSku = rSku.toString().trim().toLowerCase();
+            if (rSku && rSku !== 'mã sku' && rSku !== 'sku') {
+                rightSKUs.add(rSku);
+            }
+        });
+
+        leftSKUs.forEach((name, sku) => {
+            if (!rightSKUs.has(sku)) {
+                outListNotOut.add(sku);
+                outMissingSKUs.set(sku, name);
+            }
+        });
+    } catch (e) {
+        console.error("Out Data Error", e);
+    }
 }
 
 // ============================================================
@@ -241,6 +309,25 @@ function processData(json) {
             };
         });
 
+        // INJECT OUT SKUs that are missing from allData
+        outListNotOut.forEach(sku => {
+            const existing = allData.find(d => (getSKU(d) || '').toLowerCase() === sku);
+            if (!existing) {
+                const name = outMissingSKUs.get(sku) || sku;
+                allData.push({
+                    'MÃ SKU': sku,
+                    'TÊN SẢN PHẨM': name,
+                    _sys: 0,
+                    _act: 0,
+                    _gap: 0,
+                    _moneyTotal: 0,
+                    _moneyOutTotal: 0,
+                    _moneyRemainTotal: 0,
+                    rawRows: []
+                });
+            }
+        });
+
         updateStats();
         applyFilter();
         setControls(true);
@@ -264,8 +351,8 @@ function updateStats() {
         if (d._gap < 0) missing++;
         else if (d._gap === 0) ok++;
         
-        // Count SKUs that haven't been 'out'ed (Số tiền đã Out == 0)
-        if (d._moneyOutTotal <= 0 && d._moneyTotal > 0) notOut++;
+        // Count SKUs that haven't been 'out'ed based on the OUT sheet logic
+        if (outListNotOut.has((getSKU(d) || '').toLowerCase())) notOut++;
     });
 
     document.getElementById('statTotalSKU').textContent = allData.length.toLocaleString('vi-VN');
@@ -473,7 +560,7 @@ window.openCatModal = function(type) {
     currentCatType = type;
     currentCatData = allData.filter(d => {
         if (type === 'missing') return d._gap < 0;
-        if (type === 'not_out') return d._moneyOutTotal <= 0 && d._moneyTotal > 0;
+        if (type === 'not_out') return outListNotOut.has((getSKU(d) || '').toLowerCase());
         if (type === 'ok') return d._gap === 0;
         return true;
     });

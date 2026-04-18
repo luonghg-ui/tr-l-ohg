@@ -257,19 +257,21 @@ function processData(json) {
 // ============================================================
 function updateStats() {
     let missing = 0;
-    let surplus = 0;
+    let notOut = 0;
     let ok = 0;
 
     allData.forEach(d => {
         if (d._gap < 0) missing++;
-        else if (d._gap > 0) surplus++;
-        else ok++;
+        else if (d._gap === 0) ok++;
+        
+        // Count SKUs that haven't been 'out'ed (Số tiền đã Out == 0)
+        if (d._moneyOutTotal <= 0 && d._moneyTotal > 0) notOut++;
     });
 
     document.getElementById('statTotalSKU').textContent = allData.length.toLocaleString('vi-VN');
     document.getElementById('statMatched').textContent = ok.toLocaleString('vi-VN');
     document.getElementById('statMissing').textContent = missing.toLocaleString('vi-VN');
-    document.getElementById('statSurplus').textContent = surplus.toLocaleString('vi-VN');
+    document.getElementById('statNotOut').textContent = notOut.toLocaleString('vi-VN');
 }
 
 function applyFilter() {
@@ -471,7 +473,7 @@ window.openCatModal = function(type) {
     currentCatType = type;
     currentCatData = allData.filter(d => {
         if (type === 'missing') return d._gap < 0;
-        if (type === 'surplus') return d._gap > 0;
+        if (type === 'not_out') return d._moneyOutTotal <= 0 && d._moneyTotal > 0;
         if (type === 'ok') return d._gap === 0;
         return true;
     });
@@ -481,8 +483,8 @@ window.openCatModal = function(type) {
     if (type === 'missing') {
         title = 'SKU Thiếu (Missing)';
         iconHTML = `<div class="stat-icon red" style="margin:0;"><i class='bx bx-layer-minus'></i></div>`;
-    } else if (type === 'surplus') {
-        title = 'SKU Dư (Surplus)';
+    } else if (type === 'not_out') {
+        title = 'SKU ĐÃ TÌM THẤY CHƯA KIỂM';
         iconHTML = `<div class="stat-icon yellow" style="margin:0;"><i class='bx bx-layer-plus'></i></div>`;
     } else if (type === 'ok') {
         title = 'SKU Khớp Hoàn Toàn';

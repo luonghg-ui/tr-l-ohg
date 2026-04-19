@@ -641,10 +641,8 @@ window.exportCatDataToExcel = function() {
         return;
     }
     try {
-        let totalSys = 0;
-        let totalAct = 0;
-        let totalGap = 0;
-        let totalMoney = 0;
+        // --- Calculate Totals ---
+        let totalSys = 0, totalAct = 0, totalGap = 0, totalMoney = 0;
 
         const dataRows = currentCatData.map((item, index) => {
             totalSys += item._sys || 0;
@@ -654,11 +652,11 @@ window.exportCatDataToExcel = function() {
 
             return {
                 'STT': index + 1,
-                'MÃ SKU': getSKU(item),
-                'TÊN SẢN PHẨM': getName(item),
-                'CẦN KIỂM': item._sys,
-                'ĐĐÃ KIỂM': item._act,
-                'CHÊNH LỆCH': item._gap,
+                'MÃ SKU': getSKU(item) || '',
+                'TÊN SẢN PHẨM': getName(item) || '',
+                'CẦN KIỂM': item._sys || 0,
+                'ĐÃ KIỂM': item._act || 0,
+                'CHÊNH LỆCH': item._gap || 0,
                 'SỐ TIỀN CÒN LẠI': item._moneyRemainTotal || 0
             };
         });
@@ -669,87 +667,86 @@ window.exportCatDataToExcel = function() {
             'MÃ SKU': '',
             'TÊN SẢN PHẨM': 'TỔNG CỘNG',
             'CẦN KIỂM': totalSys,
-            'ĐĐÃ KIỂM': totalAct,
+            'ĐÃ KIỂM': totalAct,
             'CHÊNH LỆCH': totalGap,
             'SỐ TIỀN CÒN LẠI': totalMoney
         });
 
         const worksheet = XLSX.utils.json_to_sheet(dataRows);
 
-        // Styling specifications
+        // --- DESIGN TOKENS ---
+        const COLOR_NAVY = '1F3864';
+        const COLOR_WHITE = 'FFFFFF';
+        const COLOR_ZEBRA = 'F3F4F6'; // Light gray for zebra stripes
+        const COLOR_TOTAL_BG = 'D9E2F3';
+        const BORDER_STYLE = { style: 'thin', color: { rgb: 'B2B2B2' } };
+
+        // --- STYLES ---
         const headerStyle = {
-            font: { bold: true, color: { rgb: "FFFFFF" }, name: 'Arial', sz: 11 },
-            fill: { fgColor: { rgb: "5B9BD5" } },
-            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            font: { bold: true, color: { rgb: COLOR_WHITE }, name: 'Arial', sz: 11 },
+            fill: { patternType: 'solid', fgColor: { rgb: COLOR_NAVY } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
             border: {
-                top: { style: "thin", color: { rgb: "000000" } },
-                bottom: { style: "thin", color: { rgb: "000000" } },
-                left: { style: "thin", color: { rgb: "000000" } },
-                right: { style: "thin", color: { rgb: "000000" } }
+                top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE
             }
         };
 
-        const dataStyleCenter = {
-            font: { name: 'Arial', sz: 11 },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-                top: { style: "thin", color: { rgb: "000000" } },
-                bottom: { style: "thin", color: { rgb: "000000" } },
-                left: { style: "thin", color: { rgb: "000000" } },
-                right: { style: "thin", color: { rgb: "000000" } }
-            }
-        };
+        const dataStyleCenter = (isZebra) => ({
+            font: { name: 'Arial', sz: 10 },
+            fill: { patternType: 'solid', fgColor: { rgb: isZebra ? COLOR_ZEBRA : COLOR_WHITE } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE }
+        });
 
-        const dataStyleLeft = {
-            font: { name: 'Arial', sz: 11 },
-            alignment: { horizontal: "left", vertical: "center" },
-            border: {
-                top: { style: "thin", color: { rgb: "000000" } },
-                bottom: { style: "thin", color: { rgb: "000000" } },
-                left: { style: "thin", color: { rgb: "000000" } },
-                right: { style: "thin", color: { rgb: "000000" } }
-            }
-        };
+        const dataStyleLeft = (isZebra) => ({
+            font: { name: 'Arial', sz: 10 },
+            fill: { patternType: 'solid', fgColor: { rgb: isZebra ? COLOR_ZEBRA : COLOR_WHITE } },
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE }
+        });
 
-        const totalStyle = {
+        const dataStyleRightValue = (isZebra) => ({
+            font: { name: 'Arial', sz: 10 },
+            fill: { patternType: 'solid', fgColor: { rgb: isZebra ? COLOR_ZEBRA : COLOR_WHITE } },
+            alignment: { horizontal: 'right', vertical: 'center' },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE },
+            numFmt: '#,##0'
+        });
+
+        const totalRowStyle = (align) => ({
             font: { bold: true, name: 'Arial', sz: 11 },
-            fill: { fgColor: { rgb: "DDEBF7" } },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-                top: { style: "thin", color: { rgb: "000000" } },
-                bottom: { style: "thin", color: { rgb: "000000" } },
-                left: { style: "thin", color: { rgb: "000000" } },
-                right: { style: "thin", color: { rgb: "000000" } }
-            }
-        };
+            fill: { patternType: 'solid', fgColor: { rgb: COLOR_TOTAL_BG } },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE },
+            numFmt: align === 'right' ? '#,##0' : ''
+        });
 
-        // Apply styles to all cells
+        // --- APPLY STYLES ---
         const range = XLSX.utils.decode_range(worksheet['!ref']);
         for (let R = range.s.r; R <= range.e.r; ++R) {
+            const isZebra = R > 0 && R % 2 === 0; // Alternating colors
             for (let C = range.s.c; C <= range.e.c; ++C) {
                 const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
                 if (!worksheet[cellRef]) continue;
 
-                if (R === 0) { // Header row
+                if (R === 0) { // Header
                     worksheet[cellRef].s = headerStyle;
-                } else if (R === range.e.r) { // Last row (Total)
-                    worksheet[cellRef].s = totalStyle;
-                } else { // Data rows
-                    if (C === 0 || C === 3 || C === 4 || C === 5 || C === 6) { // STT, Numbers
-                        worksheet[cellRef].s = dataStyleCenter;
-                    } else { // SKU, Name
-                        worksheet[cellRef].s = dataStyleLeft;
+                } else if (R === range.e.r) { // Total Row
+                    const align = (C === 2) ? 'left' : (C >= 3 ? 'right' : 'center');
+                    worksheet[cellRef].s = totalRowStyle(align);
+                } else { // Body
+                    if (C === 0) { // STT
+                        worksheet[cellRef].s = dataStyleCenter(isZebra);
+                    } else if (C === 1 || C === 2) { // SKU / Name
+                        worksheet[cellRef].s = dataStyleLeft(isZebra);
+                    } else { // Values
+                        worksheet[cellRef].s = dataStyleRightValue(isZebra);
                     }
-                }
-                
-                // Format money column
-                if (C === 6 && R > 0) {
-                     worksheet[cellRef].z = '#,##0'; // format as number with commas
                 }
             }
         }
 
-        // Set column widths
+        // --- CONFIGURATION ---
         worksheet['!cols'] = [
             { wch: 6 },  // STT
             { wch: 25 }, // MÃ SKU
@@ -760,6 +757,12 @@ window.exportCatDataToExcel = function() {
             { wch: 20 }  // SỐ TIỀN CÒN LẠI
         ];
 
+        // Freeze top row
+        worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+        
+        // Auto filter
+        worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }) };
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Chi Tiet");
         const d = new Date();
@@ -767,7 +770,7 @@ window.exportCatDataToExcel = function() {
         XLSX.writeFile(workbook, `Missing_Export_${currentCatType}_${dateStr}.xlsx`);
     } catch (err) {
         console.error(err);
-        alert("Lỗi xuất file Excel! Kiểm tra console.");
+        alert("Lỗi xuất file Excel!");
     }
 };
 

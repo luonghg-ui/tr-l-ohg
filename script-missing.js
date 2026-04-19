@@ -134,26 +134,10 @@ function processOutData(json) {
         if (!json?.table?.rows) return;
         const rows = json.table.rows;
         
-        // Find indices dynamically from headers usually at row 0 or 1
-        let leftSkuIdx = 0;
-        let rightSkuIdx = 8; // fallback
+        let leftSkuIdx = 0; // Col A
+        let leftNameIdx = 1; // Col B
         
-        const headerRow = rows.find(r => r.c && r.c.some(c => c && typeof c.v === 'string' && (c.v.toUpperCase().trim() === 'MÃ SKU' || c.v.toUpperCase().trim() === 'SKU')));
-        if (headerRow) {
-            let firstSku = -1;
-            headerRow.c.forEach((c, idx) => {
-                if (c && typeof c.v === 'string' && (c.v.toUpperCase().trim() === 'MÃ SKU' || c.v.toUpperCase().trim() === 'SKU')) {
-                    if (firstSku === -1) firstSku = idx;
-                    else rightSkuIdx = idx;
-                }
-            });
-            if (firstSku !== -1) leftSkuIdx = firstSku;
-        }
-
-        let leftNameIdx = leftSkuIdx + 1;
-
         let leftSKUs = new Map();
-        let rightSKUs = new Set();
         
         rows.forEach(r => {
             if (!r.c) return;
@@ -163,19 +147,11 @@ function processOutData(json) {
                 let lName = r.c[leftNameIdx]?.v;
                 leftSKUs.set(lSku, lName ? lName.toString().trim() : '');
             }
-            
-            let rSku = r.c[rightSkuIdx]?.v;
-            if (rSku) rSku = rSku.toString().trim().toLowerCase();
-            if (rSku && rSku !== 'mã sku' && rSku !== 'sku') {
-                rightSKUs.add(rSku);
-            }
         });
 
         leftSKUs.forEach((name, sku) => {
-            if (!rightSKUs.has(sku)) {
-                outListNotOut.add(sku);
-                outMissingSKUs.set(sku, name);
-            }
+            outListNotOut.add(sku);
+            outMissingSKUs.set(sku, name);
         });
     } catch (e) {
         console.error("Out Data Error", e);

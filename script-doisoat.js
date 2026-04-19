@@ -591,170 +591,158 @@ async function exportToExcel(rows, fileName, summary) {
     try {
         const workbook = new ExcelJS.Workbook();
         
-        // --- Sheet 1: Tổng số sku (Styled as per image) ---
+        // ─── HELPER STYLES ───────────────────────────────────────
+        const blueHeader = {
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
+            font: { name: 'Arial', bold: true, size: 11, color: { argb: 'FFFFFFFF' } },
+            alignment: { vertical: 'middle', horizontal: 'center', wrapText: true },
+            border: {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+        };
+
+        const lightBlueFill = {
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB8CCE4' } },
+            font: { name: 'Arial', bold: false, size: 11 },
+            border: {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+        };
+
+        const normalCell = {
+            font: { name: 'Arial', size: 11 },
+            border: {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+        };
+
+        function applyStyle(cell, styleObj) {
+            if (styleObj.fill)      cell.fill = styleObj.fill;
+            if (styleObj.font)      cell.font = styleObj.font;
+            if (styleObj.alignment) cell.alignment = styleObj.alignment;
+            if (styleObj.border)    cell.border = styleObj.border;
+        }
+
+        // ─── SHEET 1: TỔNG SỐ SKU ────────────────────────────────
         const summarySheet = workbook.addWorksheet('Tổng số sku', {
             views: [{ showGridLines: false }]
         });
-        
-        // Define columns
         summarySheet.columns = [
             { width: 10 }, // A (STT)
             { width: 40 }, // B (NỘI DUNG)
             { width: 20 }  // C (SỐ LƯỢNG)
         ];
 
-        // Row 2: Headers
-        const headerRow = summarySheet.getRow(2);
-        headerRow.values = ["STT", "NỘI DUNG", "SỐ LƯỢNG"];
-        headerRow.height = 30;
-        headerRow.eachCell((cell, colNumber) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF76933C' } // Olive Green (matches your image better)
-            };
-            cell.font = { name: 'Arial', bold: false, size: 11, color: { argb: 'FF000000' } };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-            };
+        // Row 1: blank
+        summarySheet.getRow(1).height = 10;
+
+        // Row 2: Header
+        const hRow = summarySheet.getRow(2);
+        hRow.height = 30;
+        hRow.values = ['STT', 'NỘI DUNG', 'SỐ LƯỢNG'];
+        hRow.eachCell({ includeEmpty: true }, cell => applyStyle(cell, blueHeader));
+
+        // Row 3: Ca ngày
+        const r3 = summarySheet.getRow(3);
+        r3.height = 25;
+        r3.values = [1, 'PICK CA 1 ,2,HC', summary.day || 0];
+        r3.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, normalCell);
+            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-        // Row 3: PICK CA 1, 2, HC
-        const row3 = summarySheet.getRow(3);
-        row3.values = [1, "PICK CA 1 ,2,HC", summary.day || 0];
-        row3.height = 25;
-        row3.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            cell.alignment = { 
-                vertical: 'middle', 
-                horizontal: colNumber === 1 ? 'center' : (colNumber === 2 ? 'left' : 'right') 
-            };
+        // Row 4: Ca đêm
+        const r4 = summarySheet.getRow(4);
+        r4.height = 25;
+        r4.values = [2, 'PICK ĐÊM', summary.night || 0];
+        r4.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, normalCell);
+            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-        // Row 4: PICK ĐÊM
-        const row4 = summarySheet.getRow(4);
-        row4.values = [2, "PICK ĐÊM", summary.night || 0];
-        row4.height = 25;
-        row4.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            cell.alignment = { 
-                vertical: 'middle', 
-                horizontal: colNumber === 1 ? 'center' : (colNumber === 2 ? 'left' : 'right') 
-            };
-        });
-
-        // Row 5: TỔNG SKU PICK
-        const row5 = summarySheet.getRow(5);
-        row5.values = ["", "TỔNG SKU PICK", summary.totalSku || 0];
-        row5.height = 25;
-        row5.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFC6E0B4' } // Light Green
-            };
-            cell.font = { bold: false };
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            cell.alignment = { 
-                vertical: 'middle', 
-                horizontal: colNumber === 2 ? 'left' : (colNumber === 3 ? 'right' : 'center') 
-            };
+        // Row 5: TỔNG SKU PICK (light blue)
+        const r5 = summarySheet.getRow(5);
+        r5.height = 25;
+        r5.values = ['', 'TỔNG SKU PICK', summary.totalSku || 0];
+        r5.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, lightBlueFill);
+            cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
         });
 
         // Row 6: TỔNG SỐ TIỀN PHẠT
-        const row6 = summarySheet.getRow(6);
-        row6.values = ["", "TỔNG SỐ TIỀN PHẠT", summary.penalty || 0];
-        row6.height = 25;
-        row6.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            cell.alignment = { 
-                vertical: 'middle', 
-                horizontal: colNumber === 2 ? 'left' : (colNumber === 3 ? 'right' : 'center') 
-            };
+        const r6 = summarySheet.getRow(6);
+        r6.height = 25;
+        r6.values = ['', 'TỔNG SỐ TIỀN PHẠT', summary.penalty || 0];
+        r6.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, normalCell);
+            cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
+            if (col === 3) cell.numFmt = '#,##0';
         });
 
-        // --- Sheet 2: Chi tiết (Sheet1 old name) ---
+        // ─── SHEET 2: CHI TIẾT ───────────────────────────────────
         const detailSheet = workbook.addWorksheet('Chi tiết');
         detailSheet.columns = [
-            { header: 'Ngày', key: 'date', width: 15 },
-            { header: 'Mã NV', key: 'msnv', width: 25 },
-            { header: 'Họ tên', key: 'name', width: 30 },
-            { header: 'Bộ phận', key: 'dept', width: 15 },
-            { header: 'Ca làm', key: 'shift', width: 15 },
-            { header: 'Giờ vào', key: 'timeIn', width: 12 },
-            { header: 'Giờ ra', key: 'timeOut', width: 12 },
-            { header: 'Sản lượng thực tế', key: 'output', width: 18 }
+            { header: 'Ngày',              key: 'date',    width: 15 },
+            { header: 'Mã NV',             key: 'msnv',    width: 25 },
+            { header: 'Họ tên',            key: 'name',    width: 30 },
+            { header: 'Bộ phận',           key: 'dept',    width: 15 },
+            { header: 'Ca làm',            key: 'shift',   width: 15 },
+            { header: 'Giờ vào',           key: 'timeIn',  width: 12 },
+            { header: 'Giờ ra',            key: 'timeOut', width: 12 },
+            { header: 'Sản lượng thực tế', key: 'output',  width: 20 }
         ];
 
-        // Style the detail header (Row 1)
+        // Style header row
         const detailHeader = detailSheet.getRow(1);
         detailHeader.height = 30;
-        detailHeader.eachCell((cell) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF76933C' } // Olive Green
-            };
-            cell.font = { name: 'Arial', bold: false, size: 11, color: { argb: 'FF000000' } };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-            };
-        });
+        detailHeader.eachCell({ includeEmpty: true }, cell => applyStyle(cell, blueHeader));
 
-        // Add data and apply borders/alignment
+        // Add data rows
         rows.forEach(item => {
             const row = detailSheet.addRow({
-                date: getVal(item, 'date'),
-                msnv: getVal(item, 'msnv'),
-                name: getVal(item, 'name'),
-                dept: getVal(item, 'dept'),
-                shift: getVal(item, 'shift'),
-                timeIn: getVal(item, 'timeIn'),
+                date:    getVal(item, 'date'),
+                msnv:    getVal(item, 'msnv'),
+                name:    getVal(item, 'name'),
+                dept:    getVal(item, 'dept'),
+                shift:   getVal(item, 'shift'),
+                timeIn:  getVal(item, 'timeIn'),
                 timeOut: getVal(item, 'timeOut'),
-                output: parseInt(getVal(item, 'output')) || 0
+                output:  parseInt(getVal(item, 'output')) || 0
             });
-            
             row.height = 20;
-            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
+            row.eachCell({ includeEmpty: true }, (cell, col) => {
+                applyStyle(cell, normalCell);
+                // col: 1=Ngày, 2=MãNV, 3=Tên, 4=BộPhận, 5=Ca, 6=GiờVào, 7=GiờRa, 8=SảnLượng
+                const center = [1, 4, 5, 6, 7];
+                const right  = [8];
+                cell.alignment = {
+                    vertical: 'middle',
+                    horizontal: right.includes(col) ? 'right' : center.includes(col) ? 'center' : 'left'
                 };
-                
-                // Set specific alignments for each column
-                let alignment = 'left';
-                if ([1, 4, 6, 7].includes(colNumber)) {
-                    alignment = 'center'; // Ngày, Bộ phận, Giờ vào, Giờ ra
-                } else if (colNumber === 8) {
-                    alignment = 'right'; // Sản lượng
-                }
-                
-                cell.alignment = { vertical: 'middle', horizontal: alignment };
             });
         });
 
-        // Auto-filter and freeze top row
+        // Auto-filter and freeze header
         detailSheet.autoFilter = 'A1:H1';
         detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
 
-        // Write to buffer and trigger download
+        // Write and download
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, fileName);
 
     } catch (err) {
         console.error("Export error:", err);
-        alert("Lỗi khi xuất file Excel!");
+        alert("Lỗi khi xuất file Excel! Xem console để biết chi tiết.");
     }
 }
 

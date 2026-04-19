@@ -351,8 +351,8 @@ function updateStats() {
         if (d._gap < 0) missing++;
         else if (d._gap === 0) ok++;
         
-        // Count SKUs that haven't been 'out'ed based on the OUT sheet logic
-        if (outListNotOut.has((getSKU(d) || '').toLowerCase())) notOut++;
+        // Count SKUs that haven't been 'out'ed based on BOTH the OUT sheet and Sumary sheet
+        if (outListNotOut.has((getSKU(d) || '').toLowerCase()) && d._moneyOutTotal <= 0) notOut++;
     });
 
     document.getElementById('statTotalSKU').textContent = allData.length.toLocaleString('vi-VN');
@@ -560,7 +560,7 @@ window.openCatModal = function(type) {
     currentCatType = type;
     currentCatData = allData.filter(d => {
         if (type === 'missing') return d._gap < 0;
-        if (type === 'not_out') return outListNotOut.has((getSKU(d) || '').toLowerCase());
+        if (type === 'not_out') return outListNotOut.has((getSKU(d) || '').toLowerCase()) && d._moneyOutTotal <= 0;
         if (type === 'ok') return d._gap === 0;
         return true;
     });

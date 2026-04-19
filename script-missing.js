@@ -641,23 +641,133 @@ window.exportCatDataToExcel = function() {
         return;
     }
     try {
-        const exportMap = currentCatData.map(item => ({
-            'Tên Sản Phẩm': getName(item),
-            'Mã SKU': getSKU(item),
-            'Cần Kiểm': item._sys,
-            'Đã Kiểm': item._act,
-            'Chênh Lệch': item._gap,
-            'Số tiền còn lại': item._moneyRemainTotal || 0
-        }));
-        const worksheet = XLSX.utils.json_to_sheet(exportMap);
+        let totalSys = 0;
+        let totalAct = 0;
+        let totalGap = 0;
+        let totalMoney = 0;
+
+        const dataRows = currentCatData.map((item, index) => {
+            totalSys += item._sys || 0;
+            totalAct += item._act || 0;
+            totalGap += item._gap || 0;
+            totalMoney += item._moneyRemainTotal || 0;
+
+            return {
+                'STT': index + 1,
+                'MÃ SKU': getSKU(item),
+                'TÊN SẢN PHẨM': getName(item),
+                'CẦN KIỂM': item._sys,
+                'ĐĐÃ KIỂM': item._act,
+                'CHÊNH LỆCH': item._gap,
+                'SỐ TIỀN CÒN LẠI': item._moneyRemainTotal || 0
+            };
+        });
+
+        // Add Total Row
+        dataRows.push({
+            'STT': '',
+            'MÃ SKU': '',
+            'TÊN SẢN PHẨM': 'TỔNG CỘNG',
+            'CẦN KIỂM': totalSys,
+            'ĐĐÃ KIỂM': totalAct,
+            'CHÊNH LỆCH': totalGap,
+            'SỐ TIỀN CÒN LẠI': totalMoney
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(dataRows);
+
+        // Styling specifications
+        const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" }, name: 'Arial', sz: 11 },
+            fill: { fgColor: { rgb: "5B9BD5" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+            }
+        };
+
+        const dataStyleCenter = {
+            font: { name: 'Arial', sz: 11 },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+            }
+        };
+
+        const dataStyleLeft = {
+            font: { name: 'Arial', sz: 11 },
+            alignment: { horizontal: "left", vertical: "center" },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+            }
+        };
+
+        const totalStyle = {
+            font: { bold: true, name: 'Arial', sz: 11 },
+            fill: { fgColor: { rgb: "DDEBF7" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+            }
+        };
+
+        // Apply styles to all cells
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!worksheet[cellRef]) continue;
+
+                if (R === 0) { // Header row
+                    worksheet[cellRef].s = headerStyle;
+                } else if (R === range.e.r) { // Last row (Total)
+                    worksheet[cellRef].s = totalStyle;
+                } else { // Data rows
+                    if (C === 0 || C === 3 || C === 4 || C === 5 || C === 6) { // STT, Numbers
+                        worksheet[cellRef].s = dataStyleCenter;
+                    } else { // SKU, Name
+                        worksheet[cellRef].s = dataStyleLeft;
+                    }
+                }
+                
+                // Format money column
+                if (C === 6 && R > 0) {
+                     worksheet[cellRef].z = '#,##0'; // format as number with commas
+                }
+            }
+        }
+
+        // Set column widths
+        worksheet['!cols'] = [
+            { wch: 6 },  // STT
+            { wch: 25 }, // MÃ SKU
+            { wch: 50 }, // TÊN SẢN PHẨM
+            { wch: 12 }, // CẦN KIỂM
+            { wch: 12 }, // ĐÃ KIỂM
+            { wch: 15 }, // CHÊNH LỆCH
+            { wch: 20 }  // SỐ TIỀN CÒN LẠI
+        ];
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Chi Tiet");
         const d = new Date();
         const dateStr = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
-        XLSX.writeFile(workbook, `Detail_${currentCatType}_${dateStr}.xlsx`);
+        XLSX.writeFile(workbook, `Missing_Export_${currentCatType}_${dateStr}.xlsx`);
     } catch (err) {
         console.error(err);
-        alert("Lỗi xuất file Excel!");
+        alert("Lỗi xuất file Excel! Kiểm tra console.");
     }
 };
 

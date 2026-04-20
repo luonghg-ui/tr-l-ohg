@@ -17,6 +17,8 @@ let sortCol      = 'gap';
 let sortDir      = 'asc';
 let currentPage  = 1;
 let jsonpScripts = [];
+let syncedSKUs    = new Set(); // SKU Codes that have been pushed to Sheet OUT
+const GAS_OUT_URL = 'https://script.google.com/macros/s/AKfycbwNRXQ7gdxm-5yupc7Lg0gaoqWWnldiW4GmM1IWZ5YAYLkpfbAEuJAsTL6kNEp4IPom/exec';
 
 // ── DOM ──
 const searchInput   = document.getElementById('searchInput');
@@ -558,6 +560,23 @@ window.openCatModal = function(type) {
     currentCatData.forEach(d => moneySum += (d._moneyRemainTotal || 0));
     const formatN = num => num ? num.toLocaleString('vi-VN') : '0';
 
+    let exportBtnHTML = `<button onclick="exportCatDataToExcel()" onmouseover="this.style.background='rgba(16,185,129,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(16,185,129,0.1)'; this.style.transform='translateY(0)';" style="background:rgba(16,185,129,0.1); color:#34D399; border:1px solid rgba(16,185,129,0.3); padding:10px 20px; border-radius:14px; font-family:var(--font-display); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.3s; box-shadow: 0 4px 15px rgba(16,185,129,0.1);">
+                <i class='bx bxs-file-export' style="font-size:1.2rem;"></i> XUẤT EXCEL
+            </button>`;
+
+    if (type === 'not_out') {
+        exportBtnHTML = `
+            <div style="display:flex; gap:12px;">
+                <button onclick="exportFoundDataToOUT()" onmouseover="this.style.background='rgba(99,102,241,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(99,102,241,0.1)'; this.style.transform='translateY(0)';" style="background:rgba(99,102,241,0.1); color:#818CF8; border:1px solid rgba(99,102,241,0.3); padding:10px 20px; border-radius:14px; font-family:var(--font-display); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.3s; box-shadow: 0 4px 15px rgba(99,102,241,0.1);">
+                    <i class='bx bxs-file' style="font-size:1.2rem;"></i> XUẤT FILE OUT
+                </button>
+                <button onclick="exportCatDataToExcel()" onmouseover="this.style.background='rgba(16,185,129,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(16,185,129,0.1)'; this.style.transform='translateY(0)';" style="background:rgba(16,185,129,0.1); color:#34D399; border:1px solid rgba(16,185,129,0.3); padding:10px 20px; border-radius:14px; font-family:var(--font-display); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.3s; box-shadow: 0 4px 15px rgba(16,185,129,0.1);">
+                    <i class='bx bxs-file-export' style="font-size:1.2rem;"></i> CHI TIẾT
+                </button>
+            </div>
+        `;
+    }
+
     catModalHeader.innerHTML = `
         <div style="position:relative; width:100%; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:16px; margin-bottom: 8px;">
             ${iconHTML.replace('style="margin:0;"', 'style="margin:0; width:64px; height:64px; font-size:32px;"')}
@@ -568,12 +587,11 @@ window.openCatModal = function(type) {
                     <strong style="font-size:1.15rem; color:#fff; font-family:var(--font-display); text-shadow: 0 2px 10px rgba(255,255,255,0.2);">${formatN(moneySum)} đ</strong>
                 </div>
             </div>
-            <button onclick="exportCatDataToExcel()" onmouseover="this.style.background='rgba(16,185,129,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(16,185,129,0.1)'; this.style.transform='translateY(0)';" style="position:absolute; right:45px; top:-12px; background:rgba(16,185,129,0.1); color:#34D399; border:1px solid rgba(16,185,129,0.3); padding:10px 20px; border-radius:14px; font-family:var(--font-display); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.3s; box-shadow: 0 4px 15px rgba(16,185,129,0.1);">
-                <i class='bx bxs-file-export' style="font-size:1.2rem;"></i> XUẤT EXCEL
-            </button>
+            <div style="position:absolute; right:45px; top:0;">
+                ${exportBtnHTML}
+            </div>
         </div>
     `;
-
     let rowsHTML = currentCatData.map((item, idx) => {
         const _name = escapeHTML(getName(item)) || 'Không xác định';
         const _sku = escapeHTML(getSKU(item)) || '—';
@@ -582,6 +600,11 @@ window.openCatModal = function(type) {
         let gapColor = '#34D399';
         if (item._gap < 0) gapColor = '#F87171';
         else if (item._gap > 0) gapColor = '#FCD34D';
+
+        const rawSku = getSKU(item) || '';
+        const isSynced = syncedSKUs.has(rawSku.toLowerCase());
+        const btnClass = isSynced ? 'btn-row-out synced' : 'btn-row-out';
+        const btnIcon  = isSynced ? 'bx-check' : 'bx-cloud-upload';
 
         return `
             <tr>
@@ -594,6 +617,11 @@ window.openCatModal = function(type) {
                 <td class="text-sys" style="text-align:center;">${item._sys}</td>
                 <td class="text-act" style="text-align:center;">${item._act}</td>
                 <td style="text-align:center; font-weight:800; font-size:1.15rem; color:${gapColor}; font-family:var(--font-display);">${item._gap > 0 ? '+'+item._gap : item._gap}</td>
+                <td class="td-out-action" style="text-align:center;">
+                    <button onclick="syncSingleItemToSheet('${rawSku.replace(/'/g, "\\'")}', this)" class="${btnClass}" ${isSynced ? 'disabled' : ''} title="Đẩy dữ liệu lên Google Sheet OUT">
+                        <i class='bx ${btnIcon}'></i>
+                    </button>
+                </td>
             </tr>
         `;
     }).join('');
@@ -614,6 +642,7 @@ window.openCatModal = function(type) {
                             <th style="text-align:center;">CẦN KIỂM</th>
                             <th style="text-align:center;">ĐÃ KIỂM</th>
                             <th style="text-align:center;">CHƯA KIỂM</th>
+                            <th class="th-vertical">Tìm thấy</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -770,9 +799,136 @@ window.exportCatDataToExcel = function() {
         XLSX.writeFile(workbook, `Missing_Export_${currentCatType}_${dateStr}.xlsx`);
     } catch (err) {
         console.error(err);
-        alert("Lỗi xuất file Excel!");
+        alert("Lỗi xuất file OUT!");
     }
 };
+
+window.syncSingleItemToSheet = async function(sku, btn) {
+    if (syncedSKUs.has(sku.toLowerCase())) return;
+    
+    const item = allData.find(d => (getSKU(d) || '').toLowerCase() === sku.toLowerCase());
+    if (!item) {
+        console.error('SYNC ERROR: Item not found for SKU:', sku);
+        return;
+    }
+
+    btn.classList.add('syncing');
+    btn.disabled = true;
+
+    try {
+        const payload = {
+            sku: getSKU(item),
+            name: getName(item),
+            mainToMissing: `WH-MAIN WH-${(getSKU(item) || '').replace(/^MEDX\./, 'MX.')}`,
+            missingToMain: `WH-MISSING WH-MAIN`,
+            value: item._moneyRemainTotal || 0,
+            action: 'push_out'
+        };
+
+        console.log('SYNC START: Sending payload to GAS:', payload);
+
+        // Match the strategy in script-sync.js (no-cors for GAS)
+        await fetch(GAS_OUT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+        });
+
+        console.log('SYNC REQUEST SENT: Waiting for visual confirmation...');
+
+        // Visual feedback
+        setTimeout(() => {
+            btn.classList.remove('syncing');
+            btn.classList.add('synced');
+            btn.innerHTML = "<i class='bx bx-check'></i>";
+            syncedSKUs.add(sku.toLowerCase());
+            showBanner('success', `✅ Đã đẩy dữ liệu SKU ${sku} lên Sheet OUT.`);
+            setTimeout(hideBanner, 3000);
+        }, 1200);
+
+    } catch (error) {
+        console.error('SYNC ERROR:', error);
+        btn.classList.remove('syncing');
+        btn.disabled = false;
+        showBanner('error', '❌ Lỗi đồng bộ: ' + error.message);
+    }
+};
+
+window.exportSingleItemToOUT = function(sku) {
+    const item = allData.find(d => (getSKU(d) || '').toLowerCase() === sku.toLowerCase());
+    if (!item) {
+        alert("Không tìm thấy dữ liệu cho mã SKU này!");
+        return;
+    }
+    generateOUTExcel([item], `OUT_${sku}`);
+};
+
+window.exportFoundDataToOUT = function() {
+    if (currentCatData.length === 0) {
+        alert("Không có dữ liệu để xuất!");
+        return;
+    }
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
+    generateOUTExcel(currentCatData, `OUT_Export_${dateStr}`);
+};
+
+function generateOUTExcel(dataArray, fileName) {
+    try {
+        const outRows = dataArray.map(item => {
+            const rawSku = getSKU(item) || '';
+            const modifiedSku = rawSku.replace(/^MEDX\./, 'MX.');
+            return {
+                'Mã SKU': rawSku,
+                'Tên SKU': getName(item) || '',
+                'Main -> Missing': `WH-MAIN WH-${modifiedSku}`,
+                'Missing -> Main': `WH-MISSING WH-MAIN`,
+                'Giá trị': item._moneyRemainTotal || 0
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(outRows);
+
+        const BORDER_STYLE = { style: 'thin', color: { rgb: '000000' } };
+        const headerStyle = {
+            font: { bold: true, name: 'Arial', sz: 11 },
+            fill: { patternType: 'solid', fgColor: { rgb: 'DAEEF3' } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE }
+        };
+        const dataStyle = {
+            font: { name: 'Arial', sz: 10 },
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE }
+        };
+        const moneyStyle = {
+            font: { name: 'Arial', sz: 10 },
+            numFmt: '#,##0 "đ"',
+            border: { top: BORDER_STYLE, bottom: BORDER_STYLE, left: BORDER_STYLE, right: BORDER_STYLE }
+        };
+
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!worksheet[cellRef]) continue;
+                if (R === 0) {
+                    worksheet[cellRef].s = headerStyle;
+                } else {
+                    worksheet[cellRef].s = (C === 4) ? moneyStyle : dataStyle;
+                }
+            }
+        }
+
+        worksheet['!cols'] = [ { wch: 20 }, { wch: 50 }, { wch: 30 }, { wch: 20 }, { wch: 20 } ];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "OUT");
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi khi tạo file Excel!");
+    }
+}
 
 // ============================================================
 // UTILS

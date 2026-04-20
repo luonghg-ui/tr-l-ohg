@@ -379,24 +379,33 @@ function renderPage() {
     const slice = filtered.slice(start, start + ROWS_PER_PAGE);
     
     tableBody.innerHTML = slice.length ? slice.map((item, i) => {
+        const _sku = getSKU(item) || '';
         const img = getImg(item) || 'https://placehold.co/48x48/1e293b/4f46e5?text=?';
         const isOk = item._gap === 0;
         const isMissing = item._gap < 0; // Thiếu
         const badgeClass = isOk ? 'ok' : (isMissing ? 'missing' : 'surplus');
-        const gapText = isOk ? 'Khớp' : (item._gap > 0 ? `+${item._gap}` : item._gap);
+        
+        const isSynced = syncedSKUs.has(_sku.toLowerCase());
+        const btnClass = isSynced ? 'btn-row-out synced' : 'btn-row-out';
+        const btnIcon  = isSynced ? 'bx-check' : 'bx-cloud-upload';
 
         return `<tr data-idx="${start + i}" style="--i: ${i}">
             <td style="text-align:center; opacity:0.5;">${start + i + 1}</td>
             <td class="td-img"><img src="${img}" onerror="this.src='https://placehold.co/48x48/1e293b/4f46e5?text=?'"></td>
             <td class="td-name">
                 <div class="name-main">${highlight(getName(item), searchInput.value)}</div>
-                <span class="name-sku">${highlight(getSKU(item), searchInput.value)}</span>
+                <span class="name-sku">${highlight(_sku, searchInput.value)}</span>
             </td>
             <td class="text-sys" title="Cần kiểm (Số lượng mất)">${item._sys}</td>
             <td class="text-act" title="Đã kiểm (Số lượng đã out)">${item._act}</td>
             <td><span class="badge-gap ${badgeClass}" title="Chưa kiểm (Số lượng còn lại)">${item._gap}</span></td>
+            <td class="td-out-action" style="text-align:center;">
+                <button onclick="event.stopPropagation(); syncSingleItemToSheet('${_sku.replace(/'/g, "\\'")}', this)" class="${btnClass}" ${isSynced ? 'disabled' : ''} title="Đẩy dữ liệu lên Google Sheet OUT">
+                    <i class='bx ${btnIcon}'></i>
+                </button>
+            </td>
         </tr>`;
-    }).join('') : '<tr><td colspan="6" class="empty-state">Không tìm thấy mã nào thoả mãn.</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty-state">Không tìm thấy mã nào thoả mãn.</td></tr>';
 
     tableBody.querySelectorAll('tr[data-idx]').forEach(tr => tr.onclick = () => openModal(parseInt(tr.dataset.idx)));
     

@@ -100,6 +100,7 @@ function fetchData() {
     // --- Sheet 1: Dữ liệu đối soát (sản lượng) ---
     const cbProd = 'gviz_prod_' + ts;
     window[cbProd] = function(json) {
+        console.log('📦 Received Production Data');
         parseSheetRows(json, rows => { productionData = rows; });
         delete window[cbProd];
         _prodLoaded = true;
@@ -110,6 +111,7 @@ function fetchData() {
     // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
     const cbPenalty = 'gviz_penalty_' + ts;
     window[cbPenalty] = function(json) {
+        console.log('📦 Received Penalty Data');
         parseSheetRows(json, rows => { penaltyData = rows; });
         delete window[cbPenalty];
         _penaltyLoaded = true;
@@ -126,15 +128,22 @@ function appendScript(baseUrl, callbackName) {
 }
 
 function tryFinalize() {
-    if (!_prodLoaded || !_penaltyLoaded) return; // wait for both
+    if (!_prodLoaded || !_penaltyLoaded) {
+        console.log(`⏳ Waiting for sheets: Prod=${_prodLoaded}, Penalty=${_penaltyLoaded}`);
+        return; 
+    }
     try {
+        console.log('🚀 Finalizing data aggregation...');
         aggregateData();
         applyFilter();
         renderVendorCards();
         showLoading(false);
+        console.log('✅ Dashboard ready.');
     } catch(err) {
-        console.error('Finalize error:', err);
+        console.error('❌ Finalize error:', err);
         showLoading(false);
+        // Fallback render to hide skeletons
+        if (vendorGrid) vendorGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #f87171;">Lỗi xử lý dữ liệu: ${err.message}</div>`;
     }
 }
 
@@ -240,15 +249,20 @@ function normalizeVendor(raw) {
 }
 
 function parseNumericValue(item, fieldName) {
-    const rawKey = Object.keys(item).find(k => k.endsWith('__raw') && matchesKeyField(k.replace('__raw',''), KEY_FIELDS[fieldName]));
+    if (!item) return 0;
+    const keywords = KEY_FIELDS[fieldName];
+    if (!keywords) return 0;
+
+    const rawKey = Object.keys(item).find(k => k.endsWith('__raw') && matchesKeyField(k.replace('__raw',''), keywords));
     if (rawKey) {
         const rawVal = item[rawKey];
         if (typeof rawVal === 'number' && !isNaN(rawVal)) return rawVal;
     }
     const val = getVal(item, fieldName);
-    if (!val) return 0;
-    // Strip everything except digits and decimal point
-    return parseInt(val.toString().replace(/[^0-9]/g, '')) || 0;
+    if (!val || val === '') return 0;
+    // Strip everything except digits
+    const cleaned = val.toString().replace(/[^0-9]/g, '');
+    return cleaned ? parseInt(cleaned) : 0;
 }
 
 function aggregateData() {

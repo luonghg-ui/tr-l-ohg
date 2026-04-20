@@ -238,6 +238,18 @@ function normalizeVendor(raw) {
     return v;
 }
 
+function parseNumericValue(item, fieldName) {
+    const rawKey = Object.keys(item).find(k => k.endsWith('__raw') && matchesKeyField(k.replace('__raw',''), KEY_FIELDS[fieldName]));
+    if (rawKey) {
+        const rawVal = item[rawKey];
+        if (typeof rawVal === 'number' && !isNaN(rawVal)) return rawVal;
+    }
+    const val = getVal(item, fieldName);
+    if (!val) return 0;
+    // Strip everything except digits and decimal point
+    return parseInt(val.toString().replace(/[^0-9]/g, '')) || 0;
+}
+
 function aggregateData() {
     vendorAggr = {};
 
@@ -245,7 +257,7 @@ function aggregateData() {
     productionData.forEach(item => {
         const vendor = normalizeVendor(getVal(item, 'dept'));
         const shift  = (getVal(item, 'shift') || '').toUpperCase();
-        const output = parseInt((getVal(item, 'output') || '0').toString().replace(/[^0-9]/g, '')) || 0;
+        const output = parseNumericValue(item, 'output');
 
         if (!vendorAggr[vendor]) {
             vendorAggr[vendor] = { skuCount: 0, caNgay: 0, caDem: 0, penalty: 0, details: [] };
@@ -414,9 +426,7 @@ function showShiftDetail(vendor, shiftType) {
 
     // Tính tổng sản lượng
     const totalOutput = employees.reduce((sum, item) => {
-        const raw = item[Object.keys(item).find(k => !k.endsWith('__raw') && matchesKeyField(k, KEY_FIELDS.output)) + '__raw'];
-        const val = typeof raw === 'number' ? raw : parseInt((getVal(item, 'output') || '0').toString().replace(/[^0-9]/g, '')) || 0;
-        return sum + val;
+        return sum + parseNumericValue(item, 'output');
     }, 0);
 
     const theadExtra = `
@@ -558,7 +568,8 @@ function exportAllVendorData() {
     const summaryData = {
         day: dayTotal,
         night: nightTotal,
-        totalSku: dayTotal + nightTotal,
+        totalSku: dayTotal + nightTotal, // Standard summary format
+        realTotal: dayTotal + nightTotal, // Reference for all records
         penalty: totalPenalty
     };
 
@@ -573,11 +584,11 @@ function exportVendorData(vendor) {
     }
 
     // Get Summary for specific vendor
-    const vAggr = vendorAggr[vendor] || { caNgay: 0, caDem: 0, penalty: 0 };
+    const vAggr = vendorAggr[vendor] || { caNgay: 0, caDem: 0, penalty: 0, skuCount: 0 };
     const summaryData = {
         day: vAggr.caNgay,
         night: vAggr.caDem,
-        totalSku: vAggr.caNgay + vAggr.caDem,
+        totalSku: vAggr.skuCount, // Fix: Use skuCount to capture ALL rows, even if not tagged as Day/Night shift
         penalty: vAggr.penalty
     };
 
@@ -716,7 +727,7 @@ async function exportToExcel(rows, fileName, summary) {
                 shift:   getVal(item, 'shift'),
                 timeIn:  getVal(item, 'timeIn'),
                 timeOut: getVal(item, 'timeOut'),
-                output:  parseInt(getVal(item, 'output')) || 0
+                output:  parseNumericValue(item, 'output')
             });
             row.height = 20;
             row.eachCell({ includeEmpty: true }, (cell, col) => {

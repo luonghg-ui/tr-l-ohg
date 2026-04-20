@@ -232,7 +232,7 @@ function getVal(item, fieldName) {
 
 function normalizeVendor(raw) {
     const v = (raw || 'KHÁC').toString().toUpperCase().trim();
-    if (v.includes('VIN')) return 'VIN';
+    if (v.includes('VIN') || v.includes('VIN-HR')) return 'VIN';
     if (v.includes('VIET') || v.includes('WROK') || v.includes('WORK')) return 'VIETWORK';
     if (v.includes('BPD')) return 'BPD';
     if (v === '' || v === '0') return 'KHÁC';

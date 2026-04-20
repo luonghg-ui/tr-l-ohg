@@ -713,14 +713,6 @@ async function exportToExcel(rows, fileName, summary) {
         hRow.values = ['STT', 'NỘI DUNG', 'SỐ LƯỢNG'];
         hRow.eachCell({ includeEmpty: true }, cell => applyStyle(cell, blueHeader));
 
-        // Row 3: Ca ngày
-        const r3 = summarySheet.getRow(3);
-        r3.height = 25;
-        r3.values = [1, 'PICK CA 1 ,2,HC', summary.day || 0];
-        r3.eachCell({ includeEmpty: true }, (cell, col) => {
-            applyStyle(cell, normalCell);
-            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
-        });
 
         // Row 3: Ca 1
         const r3 = summarySheet.getRow(3);

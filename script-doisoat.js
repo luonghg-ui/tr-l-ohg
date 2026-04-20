@@ -25,15 +25,15 @@ let _penaltyLoaded = false;
 // KEYWORD MAPPING (Adopted from script-pa.js for robustness)
 // ============================================================
 const KEY_FIELDS = {
-    name:    ['HỌ VÀ TÊN', 'HO VA TEN', 'TEN', 'NAME', 'TÊN'],
-    msnv:    ['MÃ NV', 'MA NV', 'MSNV', 'EMPLOYEE ID', 'MÃ NHÂN VIÊN'],
-    dept:    ['BỘ PHẬN', 'BO PHAN', 'VỊ TRÍ', 'VI TRI', 'DEPARTMENT', 'VENDOR'],
-    shift:   ['CA LÀM', 'CA LAM', 'CA', 'SHIFT'],
-    output:  ['SẢN LƯỢNG', 'SAN LUONG', 'QUANTITY', 'OUTPUT'],
-    date:    ['NGÀY', 'NGAY', 'DATE'],
+    name:    ['HỌ VÀ TÊN', 'HO VA TEN', 'TEN', 'NAME', 'TÊN', 'NHÂN VIÊN', 'NHAN VIEN'],
+    msnv:    ['MÃ NV', 'MA NV', 'MSNV', 'EMPLOYEE ID', 'MÃ NHÂN VIÊN', 'ID'],
+    dept:    ['BỘ PHẬN', 'BO PHAN', 'VỊ TRÍ', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHẬN'],
+    shift:   ['CA LÀM', 'CA LAM', 'CA', 'SHIFT', 'KIP'],
+    output:  ['SẢN LƯỢNG', 'SAN LUONG', 'QUANTITY', 'OUTPUT', 'SL', 'THỰC TẾ', 'THUC TE'],
+    date:    ['NGÀY', 'NGAY', 'DATE', 'TIME'],
     penalty: ['SỐ TIỀN PHẠT', 'SO TIEN PHAT', 'SỐ TIỀN PH', 'PHAT', 'PENALTY', 'TIỀN PHẠT'],
-    timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN'],
-    timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT'],
+    timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
+    timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT', 'RA'],
 };
 
 // ============================================================
@@ -231,10 +231,11 @@ function getVal(item, fieldName) {
 }
 
 function normalizeVendor(raw) {
-    const v = (raw || 'KHÁC').toUpperCase();
-    if (v.includes('VIN'))  return 'VIN';
-    if (v.includes('VIET') || v.includes('WROK')) return 'VIETWORK';
-    if (v.includes('BPD'))  return 'BPD';
+    const v = (raw || 'KHÁC').toString().toUpperCase().trim();
+    if (v.includes('VIN')) return 'VIN';
+    if (v.includes('VIET') || v.includes('WROK') || v.includes('WORK')) return 'VIETWORK';
+    if (v.includes('BPD')) return 'BPD';
+    if (v === '' || v === '0') return 'KHÁC';
     return v;
 }
 
@@ -302,10 +303,17 @@ function aggregateData() {
         vendorAggr[vendor].penalty += penalty;
     });
 
-    // DEBUG
-    Object.entries(vendorAggr).forEach(([v, d]) =>
-        console.log(`💰 ${v} → penalty: ${d.penalty}, ca1: ${d.ca1}, ca2: ${d.ca2}, ca3: ${d.ca3}`)
-    );
+    // ── DEBUG & TRANSPARENCY ──
+    console.log('📊 DATA SYNC SUMMARY:');
+    console.log(` - Total Rows productionData: ${productionData.length}`);
+    Object.entries(vendorAggr).forEach(([v, d]) => {
+        console.log(` - [${v}] -> Rows: ${d.details.length}, Total Output: ${d.skuCount}, Penalty: ${d.penalty}`);
+    });
+    
+    const unclassifiedRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept')) === 'KHÁC');
+    if (unclassifiedRows.length > 0) {
+        console.warn(`⚠️ Warning: ${unclassifiedRows.length} rows were unclassified (KHÁC). Check your "Bộ phận" column keywords.`);
+    }
 }
 
 // ============================================================

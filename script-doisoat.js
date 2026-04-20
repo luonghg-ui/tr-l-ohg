@@ -260,15 +260,17 @@ function aggregateData() {
         const output = parseNumericValue(item, 'output');
 
         if (!vendorAggr[vendor]) {
-            vendorAggr[vendor] = { skuCount: 0, caNgay: 0, caDem: 0, penalty: 0, details: [] };
+            vendorAggr[vendor] = { skuCount: 0, ca1: 0, ca2: 0, ca3: 0, penalty: 0, details: [] };
         }
 
         vendorAggr[vendor].skuCount += output;
 
-        if (shift.includes('1') || shift.includes('2') || shift.includes('HC') || shift.includes('HÀNH CHÍNH')) {
-            vendorAggr[vendor].caNgay += output;
+        if (shift.includes('1') || shift.includes('HC') || shift.includes('HÀNH CHÍNH')) {
+            vendorAggr[vendor].ca1 += output;
+        } else if (shift.includes('2')) {
+            vendorAggr[vendor].ca2 += output;
         } else if (shift.includes('3') || shift.includes('ĐÊM') || shift.includes('DEM')) {
-            vendorAggr[vendor].caDem += output;
+            vendorAggr[vendor].ca3 += output;
         }
 
         vendorAggr[vendor].details.push(item);
@@ -295,14 +297,14 @@ function aggregateData() {
 
         // Ensure vendor bucket exists (may not have production data)
         if (!vendorAggr[vendor]) {
-            vendorAggr[vendor] = { skuCount: 0, caNgay: 0, caDem: 0, penalty: 0, details: [] };
+            vendorAggr[vendor] = { skuCount: 0, ca1: 0, ca2: 0, ca3: 0, penalty: 0, details: [] };
         }
         vendorAggr[vendor].penalty += penalty;
     });
 
     // DEBUG
     Object.entries(vendorAggr).forEach(([v, d]) =>
-        console.log(`💰 ${v} → penalty: ${d.penalty}, caNgay: ${d.caNgay}, caDem: ${d.caDem}`)
+        console.log(`💰 ${v} → penalty: ${d.penalty}, ca1: ${d.ca1}, ca2: ${d.ca2}, ca3: ${d.ca3}`)
     );
 }
 
@@ -363,23 +365,33 @@ function openVendorDetail(vendor) {
         </div>
         <div class="modal-separator"></div>
 
-        <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'day')">
+        <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'ca1')">
             <div class="reconcile-icon day"><i class='bx bxs-sun'></i></div>
             <div class="reconcile-info">
-                <div class="reconcile-label">Ca ngày</div>
-                <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; CA 2</div>
+                <div class="reconcile-label">Ca 1</div>
+                <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; HÀNH CHÍNH</div>
             </div>
-            <div class="reconcile-value day-val">${data.caNgay.toLocaleString('vi-VN')}</div>
+            <div class="reconcile-value day-val">${data.ca1.toLocaleString('vi-VN')}</div>
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
 
-        <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'night')">
+        <div class="reconcile-item clickable" style="--item-accent: #F59E0B;" onclick="showShiftDetail('${vendor}', 'ca2')">
+            <div class="reconcile-icon" style="background: rgba(245,158,11,0.1); color: #F59E0B;"><i class='bx bxs-brightness-half'></i></div>
+            <div class="reconcile-info">
+                <div class="reconcile-label">Ca 2</div>
+                <div class="reconcile-sub">CA 2</div>
+            </div>
+            <div class="reconcile-value" style="color: #F59E0B;">${data.ca2.toLocaleString('vi-VN')}</div>
+            <i class='bx bx-chevron-right reconcile-chevron'></i>
+        </div>
+
+        <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'ca3')">
             <div class="reconcile-icon night"><i class='bx bxs-moon'></i></div>
             <div class="reconcile-info">
-                <div class="reconcile-label">Ca đêm</div>
+                <div class="reconcile-label">Ca 3</div>
                 <div class="reconcile-sub">CA 3 &nbsp;·&nbsp; CA ĐÊM</div>
             </div>
-            <div class="reconcile-value night-val">${data.caDem.toLocaleString('vi-VN')}</div>
+            <div class="reconcile-value night-val">${data.ca3.toLocaleString('vi-VN')}</div>
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
 
@@ -406,19 +418,33 @@ function closeModal() {
 // DRILL-DOWN: Shift Employee Detail
 // ============================================================
 function showShiftDetail(vendor, shiftType) {
-    const isDay = shiftType === 'day';
-    const shiftLabel   = isDay ? 'Ca ngày' : 'Ca đêm';
-    const shiftIconCls = isDay ? 'day' : 'night';
-    const shiftBxIcon  = isDay ? 'bxs-sun' : 'bxs-moon';
-    const shiftColor   = isDay ? '#FCD34D' : '#818CF8';
-    const shiftSub     = isDay ? 'CA 1 · HC · CA 2' : 'CA 3 · CA ĐÊM';
+    let shiftLabel = 'Ca 1';
+    let shiftIconCls = 'day';
+    let shiftBxIcon = 'bxs-sun';
+    let shiftColor = '#FCD34D';
+    let shiftSub = 'CA 1 · HC';
+
+    if (shiftType === 'ca2') {
+        shiftLabel = 'Ca 2';
+        shiftIconCls = 'day';
+        shiftBxIcon = 'bxs-brightness-half';
+        shiftColor = '#F59E0B';
+        shiftSub = 'CA 2';
+    } else if (shiftType === 'ca3') {
+        shiftLabel = 'Ca 3';
+        shiftIconCls = 'night';
+        shiftBxIcon = 'bxs-moon';
+        shiftColor = '#818CF8';
+        shiftSub = 'CA 3 · CA ĐÊM';
+    }
 
     const employees = productionData.filter(item => {
         if (normalizeVendor(getVal(item, 'dept')) !== vendor) return false;
         const s = (getVal(item, 'shift') || '').toUpperCase();
-        return isDay
-            ? (s.includes('1') || s.includes('2') || s.includes('HC') || s.includes('HÀNH CHÍNH'))
-            : (s.includes('3') || s.includes('ĐÊM') || s.includes('DEM'));
+        if (shiftType === 'ca1') return s.includes('1') || s.includes('HC') || s.includes('HÀNH CHÍNH');
+        if (shiftType === 'ca2') return s.includes('2');
+        if (shiftType === 'ca3') return s.includes('3') || s.includes('ĐÊM') || s.includes('DEM');
+        return false;
     });
 
     const hasTimeIn  = employees.some(i => getVal(i, 'timeIn'));
@@ -555,21 +581,23 @@ function exportAllVendorData() {
     }
 
     // Calculate Summary for All Vendors
-    let dayTotal = 0;
-    let nightTotal = 0;
+    let ca1Total = 0;
+    let ca2Total = 0;
+    let ca3Total = 0;
     let totalPenalty = 0;
 
     Object.values(vendorAggr).forEach(v => {
-        dayTotal += v.caNgay;
-        nightTotal += v.caDem;
+        ca1Total     += v.ca1;
+        ca2Total     += v.ca2;
+        ca3Total     += v.ca3;
         totalPenalty += v.penalty;
     });
 
     const summaryData = {
-        day: dayTotal,
-        night: nightTotal,
-        totalSku: dayTotal + nightTotal, // Standard summary format
-        realTotal: dayTotal + nightTotal, // Reference for all records
+        ca1: ca1Total,
+        ca2: ca2Total,
+        ca3: ca3Total,
+        totalSku: ca1Total + ca2Total + ca3Total,
         penalty: totalPenalty
     };
 
@@ -584,11 +612,12 @@ function exportVendorData(vendor) {
     }
 
     // Get Summary for specific vendor
-    const vAggr = vendorAggr[vendor] || { caNgay: 0, caDem: 0, penalty: 0, skuCount: 0 };
+    const vAggr = vendorAggr[vendor] || { ca1: 0, ca2: 0, ca3: 0, penalty: 0, skuCount: 0 };
     const summaryData = {
-        day: vAggr.caNgay,
-        night: vAggr.caDem,
-        totalSku: vAggr.skuCount, // Fix: Use skuCount to capture ALL rows, even if not tagged as Day/Night shift
+        ca1: vAggr.ca1,
+        ca2: vAggr.ca2,
+        ca3: vAggr.ca3,
+        totalSku: vAggr.skuCount,
         penalty: vAggr.penalty
     };
 
@@ -671,29 +700,47 @@ async function exportToExcel(rows, fileName, summary) {
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-        // Row 4: Ca đêm
+        // Row 3: Ca 1
+        const r3 = summarySheet.getRow(3);
+        r3.height = 25;
+        r3.values = [1, 'PICK CA 1 ,HC', summary.ca1 || 0];
+        r3.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, normalCell);
+            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
+        });
+
+        // Row 4: Ca 2
         const r4 = summarySheet.getRow(4);
         r4.height = 25;
-        r4.values = [2, 'PICK ĐÊM', summary.night || 0];
+        r4.values = [2, 'PICK CA 2', summary.ca2 || 0];
         r4.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-        // Row 5: TỔNG SKU PICK (light blue)
+        // Row 5: Ca 3
         const r5 = summarySheet.getRow(5);
         r5.height = 25;
-        r5.values = ['', 'TỔNG SKU PICK', summary.totalSku || 0];
+        r5.values = [3, 'PICK CA 3 ,ĐÊM', summary.ca3 || 0];
         r5.eachCell({ includeEmpty: true }, (cell, col) => {
+            applyStyle(cell, normalCell);
+            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
+        });
+
+        // Row 6: TỔNG SKU PICK (light blue)
+        const r6 = summarySheet.getRow(6);
+        r6.height = 25;
+        r6.values = ['', 'TỔNG SKU PICK', summary.totalSku || 0];
+        r6.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, lightBlueFill);
             cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
         });
 
-        // Row 6: TỔNG SỐ TIỀN PHẠT
-        const r6 = summarySheet.getRow(6);
-        r6.height = 25;
-        r6.values = ['', 'TỔNG SỐ TIỀN PHẠT', summary.penalty || 0];
-        r6.eachCell({ includeEmpty: true }, (cell, col) => {
+        // Row 7: TỔNG SỐ TIỀN PHẠT
+        const r7 = summarySheet.getRow(7);
+        r7.height = 25;
+        r7.values = ['', 'TỔNG SỐ TIỀN PHẠT', summary.penalty || 0];
+        r7.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
             if (col === 3) cell.numFmt = '#,##0';

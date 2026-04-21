@@ -5,7 +5,7 @@ const SHEET_ID = '1Atqwv9UdG_Ro_CBbamctGENgf-ZiUl73NrQeOaQFbK4';
 const GID_PROD = '2012066668'; // Dữ liệu đối soát
 
 // GViz URLs
-const GVIZ_PROD_URL    = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID_PROD}`;
+const GVIZ_PROD_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID_PROD}`;
 // Sheet "Danh sách lỗi vi phạm" – chứa cột K: Số tiền phạt
 const GVIZ_PENALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Danh%20s%C3%A1ch%20l%E1%BB%97i%20vi%20ph%E1%BA%A1m`;
 
@@ -13,18 +13,19 @@ const GVIZ_PENALTY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gvi
 // STATE MANAGEMENT
 // ============================================================
 let productionData = [];
-let penaltyData    = [];   // rows from Danh sách lỗi vi phạm
+let penaltyData = [];   // rows from Danh sách lỗi vi phạm
 let vendorAggr = {};
 let filteredData = [];
 let currentPage = 1;
 const ROWS_PER_PAGE = 30;
-let _prodLoaded    = false;
+let _prodLoaded = false;
 let _penaltyLoaded = false;
 
 // ============================================================
 // KEYWORD MAPPING (Adopted from script-pa.js for robustness)
 // ============================================================
 const KEY_FIELDS = {
+<<<<<<< Updated upstream:script-doisoat.js
     name:    ['HỌ VÀ TÊN', 'HO VA TEN', 'TEN', 'NAME', 'TÊN', 'NHÂN VIÊN', 'NHAN VIEN'],
     msnv:    ['MÃ NV', 'MA NV', 'MSNV', 'EMPLOYEE ID', 'MÃ NHÂN VIÊN', 'ID'],
     dept:    ['BỘ PHẬN', 'BO PHAN', 'VỊ TRÍ', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHẬN'],
@@ -34,6 +35,17 @@ const KEY_FIELDS = {
     penalty: ['SỐ TIỀN PHẠT', 'SO TIEN PHAT', 'SỐ TIỀN PH', 'PHAT', 'PENALTY', 'TIỀN PHẠT'],
     timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
     timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT', 'RA'],
+=======
+    name: ['HO VA TEN', 'HO TEN', 'TEN', 'NAME', 'NHAN VIEN'],
+    msnv: ['MA NV', 'MSNV', 'EMPLOYEE ID', 'MA NHAN VIEN', 'ID'],
+    dept: ['BO PHAN', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHAN'],
+    shift: ['CA LAM', 'CA', 'SHIFT', 'KIP'],
+    output: ['SAN LUONG', 'QUANTITY', 'OUTPUT', 'THUC TE'],
+    date: ['NGAY', 'DATE', 'TIME'],
+    penalty: ['SO TIEN PHAT', 'SO TIEN PH', 'PHAT', 'PENALTY', 'TIEN PHAT'],
+    timeIn: ['GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
+    timeOut: ['GIO RA', 'OUT TIME', 'CHECK OUT'],
+>>>>>>> Stashed changes:update/script-doisoat.js
 };
 
 // ============================================================
@@ -76,7 +88,7 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
-    
+
     const exportAllBtn = document.getElementById('exportAllBtn');
     if (exportAllBtn) {
         exportAllBtn.addEventListener('click', () => exportAllVendorData());
@@ -88,8 +100,9 @@ function setupEventListeners() {
 // ============================================================
 function fetchData() {
     showLoading(true, 'Đang đồng bộ dữ liệu đối soát...');
-    _prodLoaded    = false;
+    _prodLoaded = false;
     _penaltyLoaded = false;
+    productionData = []; // Clear previous data
 
     // Clear old scripts if any
     const oldScripts = document.querySelectorAll('script[data-type="jsonp-gviz"]');
@@ -97,6 +110,7 @@ function fetchData() {
 
     const ts = Date.now();
 
+<<<<<<< Updated upstream:script-doisoat.js
     // --- Sheet 1: Dữ liệu đối soát (sản lượng) ---
     const cbProd = 'gviz_prod_' + ts;
     window[cbProd] = function(json) {
@@ -111,6 +125,48 @@ function fetchData() {
     // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
     const cbPenalty = 'gviz_penalty_' + ts;
     window[cbPenalty] = function(json) {
+=======
+    // Define all potential production data sources
+    const prodSources = [
+        GVIZ_PROD_URL,
+        `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=VIETWORK`,
+        `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=BPD`,
+        `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=VIN`
+    ];
+
+    let sourcesLoaded = 0;
+
+    prodSources.forEach((url, index) => {
+        const cbProd = 'gviz_prod_' + index + '_' + ts;
+        window[cbProd] = function (json) {
+            console.log(`📦 Received Production Data from source ${index}`);
+            parseSheetRows(json, rows => {
+                // Merge rows, avoiding duplicates based on name + date + output
+                rows.forEach(newRow => {
+                    const isDup = productionData.some(existing =>
+                        getVal(existing, 'name') === getVal(newRow, 'name') &&
+                        getVal(existing, 'msnv') === getVal(newRow, 'msnv') &&
+                        getVal(existing, 'date') === getVal(newRow, 'date') &&
+                        getVal(existing, 'output') === getVal(newRow, 'output') &&
+                        getVal(existing, 'shift') === getVal(newRow, 'shift')
+                    );
+                    if (!isDup) productionData.push(newRow);
+                });
+            });
+            delete window[cbProd];
+            sourcesLoaded++;
+            if (sourcesLoaded === prodSources.length) {
+                _prodLoaded = true;
+                tryFinalize();
+            }
+        };
+        appendScript(url, cbProd);
+    });
+
+    // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
+    const cbPenalty = 'gviz_penalty_' + ts;
+    window[cbPenalty] = function (json) {
+>>>>>>> Stashed changes:update/script-doisoat.js
         console.log('📦 Received Penalty Data');
         parseSheetRows(json, rows => { penaltyData = rows; });
         delete window[cbPenalty];
@@ -130,7 +186,11 @@ function appendScript(baseUrl, callbackName) {
 function tryFinalize() {
     if (!_prodLoaded || !_penaltyLoaded) {
         console.log(`⏳ Waiting for sheets: Prod=${_prodLoaded}, Penalty=${_penaltyLoaded}`);
+<<<<<<< Updated upstream:script-doisoat.js
         return; 
+=======
+        return;
+>>>>>>> Stashed changes:update/script-doisoat.js
     }
     try {
         console.log('🚀 Finalizing data aggregation...');
@@ -139,7 +199,11 @@ function tryFinalize() {
         renderVendorCards();
         showLoading(false);
         console.log('✅ Dashboard ready.');
+<<<<<<< Updated upstream:script-doisoat.js
     } catch(err) {
+=======
+    } catch (err) {
+>>>>>>> Stashed changes:update/script-doisoat.js
         console.error('❌ Finalize error:', err);
         showLoading(false);
         // Fallback render to hide skeletons
@@ -179,9 +243,9 @@ function formatGvizValue(raw, fmt) {
             return `${h}:${m}`;
         } else if (parts.length >= 3) {
             // Date only → DD/MM/YYYY (gviz months are 0-indexed)
-            const y  = parts[0];
+            const y = parts[0];
             const mo = String(parts[1] + 1).padStart(2, '0');
-            const d  = String(parts[2]).padStart(2, '0');
+            const d = String(parts[2]).padStart(2, '0');
             return `${d}/${mo}/${y}`;
         }
     }
@@ -211,10 +275,10 @@ function parseSheetRows(json, onSuccess) {
                 const raw = cell ? cell.v : null;
                 const fmt = cell ? (cell.f || '') : '';
                 if (raw !== null && raw !== undefined && raw !== '') {
-                    item[headers[i]]          = formatGvizValue(raw, fmt);
+                    item[headers[i]] = formatGvizValue(raw, fmt);
                     item[headers[i] + '__raw'] = raw;
                 } else {
-                    item[headers[i]]          = '';
+                    item[headers[i]] = '';
                     item[headers[i] + '__raw'] = 0;
                 }
             });
@@ -228,17 +292,36 @@ function parseSheetRows(json, onSuccess) {
     }
 }
 
+/**
+ * Strip Vietnamese diacritics + uppercase for robust column matching.
+ * e.g. "Sản lượng" → "SAN LUONG", "Họ và tên" → "HO VA TEN"
+ */
+function normKey(str) {
+    if (!str) return '';
+    return str.toString()
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[ĐĐ]/gi, 'D')
+        .trim();
+}
+
 function matchesKeyField(colName, keywords) {
-    return keywords.some(kw => colName.toUpperCase().includes(kw.toUpperCase()));
+    const col = normKey(colName);
+    return keywords.some(kw => col.includes(normKey(kw)));
 }
 
 function getVal(item, fieldName) {
     const keywords = KEY_FIELDS[fieldName];
     if (!keywords) return '';
-    const key = Object.keys(item).find(k => matchesKeyField(k, keywords));
-    return key ? item[key] : '';
+    // Prefer shortest matching column (avoids "Sản lượng thực" over "Sản lượng")
+    const matches = Object.keys(item).filter(k => !k.endsWith('__raw') && matchesKeyField(k, keywords));
+    if (matches.length === 0) return '';
+    matches.sort((a, b) => a.length - b.length);
+    return item[matches[0]] ?? '';
 }
 
+<<<<<<< Updated upstream:script-doisoat.js
 function normalizeVendor(raw) {
     const v = (raw || 'KHÁC').toString().toUpperCase().trim();
     if (v.includes('VIN') || v.includes('VIN-HR')) return 'VIN';
@@ -246,6 +329,45 @@ function normalizeVendor(raw) {
     if (v.includes('BPD')) return 'BPD';
     if (v === '' || v === '0') return 'KHÁC';
     return v;
+=======
+function normalizeVendor(raw, item = {}) {
+    let v = (raw || '').toString().toUpperCase().trim();
+    
+    // Nếu rỗng hoặc là 'KHÁC', thử tra cứu từ cột Mã NV (MSNV)
+    if (!v || v === 'KHÁC' || v === '0') {
+        const msnv = (getVal(item, 'msnv') || '').toString().toUpperCase().trim();
+        if (msnv.includes('VIN')) v = 'VIN';
+        else if (msnv.includes('VIET') || msnv.includes('WORK') || msnv.includes('WROK')) v = 'VIETWORK';
+        else if (msnv.includes('BPD')) v = 'BPD';
+    }
+
+    if (v.includes('VIN') || v.includes('VIN-HR')) return 'VIN';
+    if (v.includes('VIET') || v.includes('WROK') || v.includes('WORK')) return 'VIETWORK';
+    if (v.includes('BPD')) return 'BPD';
+    
+    return v || 'KHÁC';
+}
+
+function parseNumericValue(item, fieldName) {
+    if (!item) return 0;
+    const keywords = KEY_FIELDS[fieldName];
+    if (!keywords) return 0;
+
+    // Prefer shortest matching raw column (avoids ambiguous columns like "Sản lượng thực")
+    const rawMatches = Object.keys(item).filter(k =>
+        k.endsWith('__raw') && matchesKeyField(k.replace('__raw', ''), keywords)
+    );
+    if (rawMatches.length > 0) {
+        rawMatches.sort((a, b) => a.length - b.length);
+        const rawKey = rawMatches[0];
+        const rawVal = item[rawKey];
+        if (typeof rawVal === 'number' && !isNaN(rawVal)) return rawVal;
+    }
+    const val = getVal(item, fieldName);
+    if (!val || val === '') return 0;
+    const cleaned = val.toString().replace(/[^0-9]/g, '');
+    return cleaned ? parseInt(cleaned) : 0;
+>>>>>>> Stashed changes:update/script-doisoat.js
 }
 
 function parseNumericValue(item, fieldName) {
@@ -268,10 +390,29 @@ function parseNumericValue(item, fieldName) {
 function aggregateData() {
     vendorAggr = {};
 
+    // ── DEBUG: In ra cột nào đang được match cho row đầu tiên ──
+    if (productionData.length > 0) {
+        const sample = productionData[0];
+        const allCols = Object.keys(sample).filter(k => !k.endsWith('__raw'));
+        console.log('📋 Tất cả cột trong sheet:', allCols);
+        ['name', 'msnv', 'dept', 'shift', 'output', 'date'].forEach(field => {
+            const keywords = KEY_FIELDS[field];
+            const matches = allCols.filter(k => matchesKeyField(k, keywords));
+            matches.sort((a, b) => a.length - b.length);
+            console.log(`🔑 [${field}] → Cột khớp: [${matches.join(', ')}] → Dùng: "${matches[0] || 'KHÔNG TÌM THẤY'}" = "${sample[matches[0]] ?? ''}"`);
+        });
+    }
+
     // ── Step 1: Aggregate sản lượng từ sheet Dữ liệu đối soát ──
     productionData.forEach(item => {
+<<<<<<< Updated upstream:script-doisoat.js
         const vendor = normalizeVendor(getVal(item, 'dept'));
         const shift  = (getVal(item, 'shift') || '').toUpperCase();
+=======
+
+        const vendor = normalizeVendor(getVal(item, 'dept'), item);
+        const shift = (getVal(item, 'shift') || '').toUpperCase();
+>>>>>>> Stashed changes:update/script-doisoat.js
         const output = parseNumericValue(item, 'output');
 
         if (!vendorAggr[vendor]) {
@@ -295,7 +436,7 @@ function aggregateData() {
     console.log('📌 penaltyData rows:', penaltyData.length);
     penaltyData.forEach(item => {
         // "Vị trí" column holds the vendor/dept info in this sheet
-        const vendor = normalizeVendor(getVal(item, 'dept'));
+        const vendor = normalizeVendor(getVal(item, 'dept'), item);
 
         const penaltyKey = Object.keys(item).find(k => !k.endsWith('__raw') && matchesKeyField(k, KEY_FIELDS.penalty));
         let penalty = 0;
@@ -323,8 +464,13 @@ function aggregateData() {
     Object.entries(vendorAggr).forEach(([v, d]) => {
         console.log(` - [${v}] -> Rows: ${d.details.length}, Total Output: ${d.skuCount}, Penalty: ${d.penalty}`);
     });
+<<<<<<< Updated upstream:script-doisoat.js
     
     const unclassifiedRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept')) === 'KHÁC');
+=======
+
+    const unclassifiedRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept'), item) === 'KHÁC');
+>>>>>>> Stashed changes:update/script-doisoat.js
     if (unclassifiedRows.length > 0) {
         console.warn(`⚠️ Warning: ${unclassifiedRows.length} rows were unclassified (KHÁC). Check your "Bộ phận" column keywords.`);
     }
@@ -336,7 +482,7 @@ function aggregateData() {
 function renderVendorCards() {
     vendorGrid.innerHTML = '';
     const vendors = Object.keys(vendorAggr).sort();
-    
+
     if (vendors.length === 0) {
         vendorGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: var(--text-dim);">Chưa có dữ liệu nhà cung cấp</div>';
         return;
@@ -361,13 +507,13 @@ function renderVendorCards() {
             </div>
             <div class="hint-text"><i class='bx bx-mouse'></i> nhấn để xem chi tiết</div>
         `;
-        
+
         // Cần tách event click của button và click của card
         card.querySelector('.btn-export-card').onclick = (e) => {
             e.stopPropagation();
             exportVendorData(vendor);
         };
-        
+
         card.onclick = () => openVendorDetail(vendor);
         vendorGrid.appendChild(card);
     });
@@ -377,7 +523,10 @@ function openVendorDetail(vendor) {
     const data = vendorAggr[vendor];
     if (!data) return;
 
-    const penaltyFormatted = data.penalty.toLocaleString('vi-VN') + ' ₫';
+    const caNgay = data.ca1 + data.ca2;
+    const caDem = data.ca3;
+    const tongSanLuong = data.skuCount;
+    const penaltyFormatted = data.penalty.toLocaleString('vi-VN') + ' đ';
 
     reconcileDetailContent.innerHTML = `
         <div class="reconcile-modal-header">
@@ -385,14 +534,25 @@ function openVendorDetail(vendor) {
             <h3 class="reconcile-detail-title">Chi tiết đối soát</h3>
             <div class="reconcile-detail-subtitle">Tổng hợp sản lượng &amp; phạt</div>
         </div>
+
+        <div class="reconcile-total-stat">
+            <div class="reconcile-total-label"><i class='bx bx-bar-chart-alt-2'></i>TỔNG SẢN LƯỢNG</div>
+            <div class="reconcile-total-value">${tongSanLuong.toLocaleString('vi-VN')}</div>
+        </div>
+
         <div class="modal-separator"></div>
 
+<<<<<<< Updated upstream:script-doisoat.js
         <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'ca1')">
+=======
+        <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'cangay')">
+>>>>>>> Stashed changes:update/script-doisoat.js
             <div class="reconcile-icon day"><i class='bx bxs-sun'></i></div>
             <div class="reconcile-info">
                 <div class="reconcile-label">Ca 1</div>
                 <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; HÀNH CHÍNH</div>
             </div>
+<<<<<<< Updated upstream:script-doisoat.js
             <div class="reconcile-value day-val">${data.ca1.toLocaleString('vi-VN')}</div>
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
@@ -408,12 +568,23 @@ function openVendorDetail(vendor) {
         </div>
 
         <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'ca3')">
+=======
+            <div class="reconcile-value day-val">${caNgay.toLocaleString('vi-VN')}</div>
+            <i class='bx bx-chevron-right reconcile-chevron'></i>
+        </div>
+
+        <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'cadem')">
+>>>>>>> Stashed changes:update/script-doisoat.js
             <div class="reconcile-icon night"><i class='bx bxs-moon'></i></div>
             <div class="reconcile-info">
                 <div class="reconcile-label">Ca 3</div>
                 <div class="reconcile-sub">CA 3 &nbsp;·&nbsp; CA ĐÊM</div>
             </div>
+<<<<<<< Updated upstream:script-doisoat.js
             <div class="reconcile-value night-val">${data.ca3.toLocaleString('vi-VN')}</div>
+=======
+            <div class="reconcile-value night-val">${caDem.toLocaleString('vi-VN')}</div>
+>>>>>>> Stashed changes:update/script-doisoat.js
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
 
@@ -421,7 +592,7 @@ function openVendorDetail(vendor) {
             <div class="reconcile-icon money"><i class='bx bx-money-withdraw'></i></div>
             <div class="reconcile-info">
                 <div class="reconcile-label">Số tiền phạt</div>
-                <div class="reconcile-sub">VI PHẠM &amp; THIếu HỤT</div>
+                <div class="reconcile-sub">VI PHẠM &amp; THIẾU HỤT</div>
             </div>
             <div class="reconcile-value penalty">${penaltyFormatted}</div>
         </div>
@@ -440,6 +611,7 @@ function closeModal() {
 // DRILL-DOWN: Shift Employee Detail
 // ============================================================
 function showShiftDetail(vendor, shiftType) {
+<<<<<<< Updated upstream:script-doisoat.js
     let shiftLabel = 'Ca 1';
     let shiftIconCls = 'day';
     let shiftBxIcon = 'bxs-sun';
@@ -454,6 +626,16 @@ function showShiftDetail(vendor, shiftType) {
         shiftSub = 'CA 2';
     } else if (shiftType === 'ca3') {
         shiftLabel = 'Ca 3';
+=======
+    let shiftLabel = 'Ca ngày';
+    let shiftIconCls = 'day';
+    let shiftBxIcon = 'bxs-sun';
+    let shiftColor = '#FCD34D';
+    let shiftSub = 'CA 1 · HC · CA 2';
+
+    if (shiftType === 'cadem') {
+        shiftLabel = 'Ca đêm';
+>>>>>>> Stashed changes:update/script-doisoat.js
         shiftIconCls = 'night';
         shiftBxIcon = 'bxs-moon';
         shiftColor = '#818CF8';
@@ -461,15 +643,20 @@ function showShiftDetail(vendor, shiftType) {
     }
 
     const employees = productionData.filter(item => {
-        if (normalizeVendor(getVal(item, 'dept')) !== vendor) return false;
+        if (normalizeVendor(getVal(item, 'dept'), item) !== vendor) return false;
         const s = (getVal(item, 'shift') || '').toUpperCase();
+<<<<<<< Updated upstream:script-doisoat.js
         if (shiftType === 'ca1') return s.includes('1') || s.includes('HC') || s.includes('HÀNH CHÍNH');
         if (shiftType === 'ca2') return s.includes('2');
         if (shiftType === 'ca3') return s.includes('3') || s.includes('ĐÊM') || s.includes('DEM');
+=======
+        if (shiftType === 'cangay') return s.includes('1') || s.includes('HC') || s.includes('HÀNH CHÍNH') || s.includes('2');
+        if (shiftType === 'cadem') return s.includes('3') || s.includes('ĐÊM') || s.includes('DEM');
+>>>>>>> Stashed changes:update/script-doisoat.js
         return false;
     });
 
-    const hasTimeIn  = employees.some(i => getVal(i, 'timeIn'));
+    const hasTimeIn = employees.some(i => getVal(i, 'timeIn'));
     const hasTimeOut = employees.some(i => getVal(i, 'timeOut'));
 
     // Tính tổng sản lượng
@@ -478,12 +665,12 @@ function showShiftDetail(vendor, shiftType) {
     }, 0);
 
     const theadExtra = `
-        ${hasTimeIn  ? '<th>Giờ vào</th>' : ''}
-        ${hasTimeOut ? '<th>Giờ ra</th>'  : ''}
+        ${hasTimeIn ? '<th>Giờ vào</th>' : ''}
+        ${hasTimeOut ? '<th>Giờ ra</th>' : ''}
     `;
 
     const rows = employees.map(item => {
-        const tIn  = hasTimeIn  ? `<td style="color:var(--text-muted);">${getVal(item, 'timeIn')  || '—'}</td>` : '';
+        const tIn = hasTimeIn ? `<td style="color:var(--text-muted);">${getVal(item, 'timeIn') || '—'}</td>` : '';
         const tOut = hasTimeOut ? `<td style="color:var(--text-muted);">${getVal(item, 'timeOut') || '—'}</td>` : '';
         return `<tr>
             <td style="font-size:0.78rem; color:var(--text-dim);">${getVal(item, 'date') || '—'}</td>
@@ -532,8 +719,8 @@ function showShiftDetail(vendor, shiftType) {
     document.querySelector('.modal-box').classList.add('drill-mode');
 }
 
-window.showShiftDetail   = showShiftDetail;
-window.openVendorDetail  = openVendorDetail;
+window.showShiftDetail = showShiftDetail;
+window.openVendorDetail = openVendorDetail;
 
 // ============================================================
 // TABLE & FILTERS
@@ -543,7 +730,8 @@ function applyFilter() {
     filteredData = productionData.filter(item => {
         const name = normalize(getVal(item, 'name'));
         const msnv = normalize(getVal(item, 'msnv'));
-        return name.includes(query) || msnv.includes(query);
+        const dept = normalize(normalizeVendor(getVal(item, 'dept'), item));
+        return name.includes(query) || msnv.includes(query) || dept.includes(query);
     });
 
     resultBadge.textContent = `Tìm thấy ${filteredData.length} nhân viên`;
@@ -609,9 +797,15 @@ function exportAllVendorData() {
     let totalPenalty = 0;
 
     Object.values(vendorAggr).forEach(v => {
+<<<<<<< Updated upstream:script-doisoat.js
         ca1Total     += v.ca1;
         ca2Total     += v.ca2;
         ca3Total     += v.ca3;
+=======
+        ca1Total += v.ca1;
+        ca2Total += v.ca2;
+        ca3Total += v.ca3;
+>>>>>>> Stashed changes:update/script-doisoat.js
         totalPenalty += v.penalty;
     });
 
@@ -627,7 +821,7 @@ function exportAllVendorData() {
 }
 
 function exportVendorData(vendor) {
-    const dataRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept')) === vendor);
+    const dataRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept'), item) === vendor);
     if (dataRows.length === 0) {
         alert(`Không có dữ liệu cho vender ${vendor}!`);
         return;
@@ -652,7 +846,7 @@ function exportVendorData(vendor) {
 async function exportToExcel(rows, fileName, summary) {
     try {
         const workbook = new ExcelJS.Workbook();
-        
+
         // ─── HELPER STYLES ───────────────────────────────────────
         const blueHeader = {
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
@@ -688,10 +882,10 @@ async function exportToExcel(rows, fileName, summary) {
         };
 
         function applyStyle(cell, styleObj) {
-            if (styleObj.fill)      cell.fill = styleObj.fill;
-            if (styleObj.font)      cell.font = styleObj.font;
+            if (styleObj.fill) cell.fill = styleObj.fill;
+            if (styleObj.font) cell.font = styleObj.font;
             if (styleObj.alignment) cell.alignment = styleObj.alignment;
-            if (styleObj.border)    cell.border = styleObj.border;
+            if (styleObj.border) cell.border = styleObj.border;
         }
 
         // ─── SHEET 1: TỔNG SỐ SKU ────────────────────────────────
@@ -714,19 +908,33 @@ async function exportToExcel(rows, fileName, summary) {
         hRow.eachCell({ includeEmpty: true }, cell => applyStyle(cell, blueHeader));
 
 
+<<<<<<< Updated upstream:script-doisoat.js
         // Row 3: Ca 1
         const r3 = summarySheet.getRow(3);
         r3.height = 25;
         r3.values = [1, 'PICK CA 1 ,HC', summary.ca1 || 0];
+=======
+        // Row 3: Ca 1, HC, Ca 2
+        const r3 = summarySheet.getRow(3);
+        r3.height = 25;
+        r3.values = [1, 'SKU CA 1 ,HC , CA 2', (summary.ca1 || 0) + (summary.ca2 || 0)];
+>>>>>>> Stashed changes:update/script-doisoat.js
         r3.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
+<<<<<<< Updated upstream:script-doisoat.js
         // Row 4: Ca 2
         const r4 = summarySheet.getRow(4);
         r4.height = 25;
         r4.values = [2, 'PICK CA 2', summary.ca2 || 0];
+=======
+        // Row 4: Ca 3
+        const r4 = summarySheet.getRow(4);
+        r4.height = 25;
+        r4.values = [2, 'SKU CA 3', summary.ca3 || 0];
+>>>>>>> Stashed changes:update/script-doisoat.js
         r4.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
@@ -763,14 +971,14 @@ async function exportToExcel(rows, fileName, summary) {
         // ─── SHEET 2: CHI TIẾT ───────────────────────────────────
         const detailSheet = workbook.addWorksheet('Chi tiết');
         detailSheet.columns = [
-            { header: 'Ngày',              key: 'date',    width: 15 },
-            { header: 'Mã NV',             key: 'msnv',    width: 25 },
-            { header: 'Họ tên',            key: 'name',    width: 30 },
-            { header: 'Bộ phận',           key: 'dept',    width: 15 },
-            { header: 'Ca làm',            key: 'shift',   width: 15 },
-            { header: 'Giờ vào',           key: 'timeIn',  width: 12 },
-            { header: 'Giờ ra',            key: 'timeOut', width: 12 },
-            { header: 'Sản lượng thực tế', key: 'output',  width: 20 }
+            { header: 'Ngày', key: 'date', width: 15 },
+            { header: 'Mã NV', key: 'msnv', width: 25 },
+            { header: 'Họ tên', key: 'name', width: 30 },
+            { header: 'Bộ phận', key: 'dept', width: 15 },
+            { header: 'Ca làm', key: 'shift', width: 15 },
+            { header: 'Giờ vào', key: 'timeIn', width: 12 },
+            { header: 'Giờ ra', key: 'timeOut', width: 12 },
+            { header: 'Sản lượng thực tế', key: 'output', width: 20 }
         ];
 
         // Style header row
@@ -781,21 +989,25 @@ async function exportToExcel(rows, fileName, summary) {
         // Add data rows
         rows.forEach(item => {
             const row = detailSheet.addRow({
-                date:    getVal(item, 'date'),
-                msnv:    getVal(item, 'msnv'),
-                name:    getVal(item, 'name'),
-                dept:    getVal(item, 'dept'),
-                shift:   getVal(item, 'shift'),
-                timeIn:  getVal(item, 'timeIn'),
+                date: getVal(item, 'date'),
+                msnv: getVal(item, 'msnv'),
+                name: getVal(item, 'name'),
+                dept: getVal(item, 'dept'),
+                shift: getVal(item, 'shift'),
+                timeIn: getVal(item, 'timeIn'),
                 timeOut: getVal(item, 'timeOut'),
+<<<<<<< Updated upstream:script-doisoat.js
                 output:  parseNumericValue(item, 'output')
+=======
+                output: parseNumericValue(item, 'output')
+>>>>>>> Stashed changes:update/script-doisoat.js
             });
             row.height = 20;
             row.eachCell({ includeEmpty: true }, (cell, col) => {
                 applyStyle(cell, normalCell);
                 // col: 1=Ngày, 2=MãNV, 3=Tên, 4=BộPhận, 5=Ca, 6=GiờVào, 7=GiờRa, 8=SảnLượng
                 const center = [1, 4, 5, 6, 7];
-                const right  = [8];
+                const right = [8];
                 cell.alignment = {
                     vertical: 'middle',
                     horizontal: right.includes(col) ? 'right' : center.includes(col) ? 'center' : 'left'

@@ -25,15 +25,15 @@ let _penaltyLoaded = false;
 // KEYWORD MAPPING (Adopted from script-pa.js for robustness)
 // ============================================================
 const KEY_FIELDS = {
-    name:    ['HỌ VÀ TÊN', 'HO VA TEN', 'TEN', 'NAME', 'TÊN', 'NHÂN VIÊN', 'NHAN VIEN'],
-    msnv:    ['MÃ NV', 'MA NV', 'MSNV', 'EMPLOYEE ID', 'MÃ NHÂN VIÊN', 'ID'],
-    dept:    ['BỘ PHẬN', 'BO PHAN', 'VỊ TRÍ', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHẬN'],
-    shift:   ['CA LÀM', 'CA LAM', 'CA', 'SHIFT', 'KIP'],
-    output:  ['SẢN LƯỢNG', 'SAN LUONG', 'QUANTITY', 'OUTPUT', 'SL', 'THỰC TẾ', 'THUC TE'],
-    date:    ['NGÀY', 'NGAY', 'DATE', 'TIME'],
-    penalty: ['SỐ TIỀN PHẠT', 'SO TIEN PHAT', 'SỐ TIỀN PH', 'PHAT', 'PENALTY', 'TIỀN PHẠT'],
-    timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
-    timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT', 'RA'],
+    name: ['HO VA TEN', 'HO TEN', 'TEN', 'NAME', 'NHAN VIEN'],
+    msnv: ['MA NV', 'MSNV', 'EMPLOYEE ID', 'MA NHAN VIEN', 'ID'],
+    dept: ['BO PHAN', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHAN'],
+    shift: ['CA LAM', 'CA', 'SHIFT', 'KIP'],
+    output: ['SAN LUONG', 'QUANTITY', 'OUTPUT', 'THUC TE'],
+    date: ['NGAY', 'DATE', 'TIME'],
+    penalty: ['SO TIEN PHAT', 'SO TIEN PH', 'PHAT', 'PENALTY', 'TIEN PHAT'],
+    timeIn: ['GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
+    timeOut: ['GIO RA', 'OUT TIME', 'CHECK OUT'],
 };
 
 // ============================================================
@@ -98,22 +98,6 @@ function fetchData() {
 
     const ts = Date.now();
 
-<<<<<<< Updated upstream:script-doisoat.js
-    // --- Sheet 1: Dữ liệu đối soát (sản lượng) ---
-    const cbProd = 'gviz_prod_' + ts;
-    window[cbProd] = function(json) {
-        console.log('📦 Received Production Data');
-        parseSheetRows(json, rows => { productionData = rows; });
-        delete window[cbProd];
-        _prodLoaded = true;
-        tryFinalize();
-    };
-    appendScript(GVIZ_PROD_URL, cbProd);
-
-    // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
-    const cbPenalty = 'gviz_penalty_' + ts;
-    window[cbPenalty] = function(json) {
-=======
     // Define all potential production data sources
     const prodSources = [
         GVIZ_PROD_URL,
@@ -154,7 +138,6 @@ function fetchData() {
     // --- Sheet 2: Danh sách lỗi vi phạm (số tiền phạt) ---
     const cbPenalty = 'gviz_penalty_' + ts;
     window[cbPenalty] = function (json) {
->>>>>>> Stashed changes:update/script-doisoat.js
         console.log('📦 Received Penalty Data');
         parseSheetRows(json, rows => { penaltyData = rows; });
         delete window[cbPenalty];
@@ -174,11 +157,7 @@ function appendScript(baseUrl, callbackName) {
 function tryFinalize() {
     if (!_prodLoaded || !_penaltyLoaded) {
         console.log(`⏳ Waiting for sheets: Prod=${_prodLoaded}, Penalty=${_penaltyLoaded}`);
-<<<<<<< Updated upstream:script-doisoat.js
-        return; 
-=======
         return;
->>>>>>> Stashed changes:update/script-doisoat.js
     }
     try {
         console.log('🚀 Finalizing data aggregation...');
@@ -187,11 +166,7 @@ function tryFinalize() {
         renderVendorCards();
         showLoading(false);
         console.log('✅ Dashboard ready.');
-<<<<<<< Updated upstream:script-doisoat.js
-    } catch(err) {
-=======
     } catch (err) {
->>>>>>> Stashed changes:update/script-doisoat.js
         console.error('❌ Finalize error:', err);
         showLoading(false);
         // Fallback render to hide skeletons
@@ -309,15 +284,6 @@ function getVal(item, fieldName) {
     return item[matches[0]] ?? '';
 }
 
-<<<<<<< Updated upstream:script-doisoat.js
-function normalizeVendor(raw) {
-    const v = (raw || 'KHÁC').toString().toUpperCase().trim();
-    if (v.includes('VIN') || v.includes('VIN-HR')) return 'VIN';
-    if (v.includes('VIET') || v.includes('WROK') || v.includes('WORK')) return 'VIETWORK';
-    if (v.includes('BPD')) return 'BPD';
-    if (v === '' || v === '0') return 'KHÁC';
-    return v;
-=======
 function normalizeVendor(raw, item = {}) {
     let v = (raw || '').toString().toUpperCase().trim();
     
@@ -355,24 +321,6 @@ function parseNumericValue(item, fieldName) {
     if (!val || val === '') return 0;
     const cleaned = val.toString().replace(/[^0-9]/g, '');
     return cleaned ? parseInt(cleaned) : 0;
->>>>>>> Stashed changes:update/script-doisoat.js
-}
-
-function parseNumericValue(item, fieldName) {
-    if (!item) return 0;
-    const keywords = KEY_FIELDS[fieldName];
-    if (!keywords) return 0;
-
-    const rawKey = Object.keys(item).find(k => k.endsWith('__raw') && matchesKeyField(k.replace('__raw',''), keywords));
-    if (rawKey) {
-        const rawVal = item[rawKey];
-        if (typeof rawVal === 'number' && !isNaN(rawVal)) return rawVal;
-    }
-    const val = getVal(item, fieldName);
-    if (!val || val === '') return 0;
-    // Strip everything except digits
-    const cleaned = val.toString().replace(/[^0-9]/g, '');
-    return cleaned ? parseInt(cleaned) : 0;
 }
 
 function aggregateData() {
@@ -393,14 +341,9 @@ function aggregateData() {
 
     // ── Step 1: Aggregate sản lượng từ sheet Dữ liệu đối soát ──
     productionData.forEach(item => {
-<<<<<<< Updated upstream:script-doisoat.js
-        const vendor = normalizeVendor(getVal(item, 'dept'));
-        const shift  = (getVal(item, 'shift') || '').toUpperCase();
-=======
 
         const vendor = normalizeVendor(getVal(item, 'dept'), item);
         const shift = (getVal(item, 'shift') || '').toUpperCase();
->>>>>>> Stashed changes:update/script-doisoat.js
         const output = parseNumericValue(item, 'output');
 
         if (!vendorAggr[vendor]) {
@@ -452,13 +395,8 @@ function aggregateData() {
     Object.entries(vendorAggr).forEach(([v, d]) => {
         console.log(` - [${v}] -> Rows: ${d.details.length}, Total Output: ${d.skuCount}, Penalty: ${d.penalty}`);
     });
-<<<<<<< Updated upstream:script-doisoat.js
-    
-    const unclassifiedRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept')) === 'KHÁC');
-=======
 
     const unclassifiedRows = productionData.filter(item => normalizeVendor(getVal(item, 'dept'), item) === 'KHÁC');
->>>>>>> Stashed changes:update/script-doisoat.js
     if (unclassifiedRows.length > 0) {
         console.warn(`⚠️ Warning: ${unclassifiedRows.length} rows were unclassified (KHÁC). Check your "Bộ phận" column keywords.`);
     }
@@ -530,49 +468,23 @@ function openVendorDetail(vendor) {
 
         <div class="modal-separator"></div>
 
-<<<<<<< Updated upstream:script-doisoat.js
-        <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'ca1')">
-=======
         <div class="reconcile-item clickable" style="--item-accent: #FCD34D;" onclick="showShiftDetail('${vendor}', 'cangay')">
->>>>>>> Stashed changes:update/script-doisoat.js
             <div class="reconcile-icon day"><i class='bx bxs-sun'></i></div>
             <div class="reconcile-info">
-                <div class="reconcile-label">Ca 1</div>
-                <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; HÀNH CHÍNH</div>
+                <div class="reconcile-label">Ca ngày</div>
+                <div class="reconcile-sub">CA 1 &nbsp;·&nbsp; HC &nbsp;·&nbsp; CA 2</div>
             </div>
-<<<<<<< Updated upstream:script-doisoat.js
-            <div class="reconcile-value day-val">${data.ca1.toLocaleString('vi-VN')}</div>
-            <i class='bx bx-chevron-right reconcile-chevron'></i>
-        </div>
-
-        <div class="reconcile-item clickable" style="--item-accent: #F59E0B;" onclick="showShiftDetail('${vendor}', 'ca2')">
-            <div class="reconcile-icon" style="background: rgba(245,158,11,0.1); color: #F59E0B;"><i class='bx bxs-brightness-half'></i></div>
-            <div class="reconcile-info">
-                <div class="reconcile-label">Ca 2</div>
-                <div class="reconcile-sub">CA 2</div>
-            </div>
-            <div class="reconcile-value" style="color: #F59E0B;">${data.ca2.toLocaleString('vi-VN')}</div>
-            <i class='bx bx-chevron-right reconcile-chevron'></i>
-        </div>
-
-        <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'ca3')">
-=======
             <div class="reconcile-value day-val">${caNgay.toLocaleString('vi-VN')}</div>
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
 
         <div class="reconcile-item clickable" style="--item-accent: #818CF8;" onclick="showShiftDetail('${vendor}', 'cadem')">
->>>>>>> Stashed changes:update/script-doisoat.js
             <div class="reconcile-icon night"><i class='bx bxs-moon'></i></div>
             <div class="reconcile-info">
-                <div class="reconcile-label">Ca 3</div>
+                <div class="reconcile-label">Ca đêm</div>
                 <div class="reconcile-sub">CA 3 &nbsp;·&nbsp; CA ĐÊM</div>
             </div>
-<<<<<<< Updated upstream:script-doisoat.js
-            <div class="reconcile-value night-val">${data.ca3.toLocaleString('vi-VN')}</div>
-=======
             <div class="reconcile-value night-val">${caDem.toLocaleString('vi-VN')}</div>
->>>>>>> Stashed changes:update/script-doisoat.js
             <i class='bx bx-chevron-right reconcile-chevron'></i>
         </div>
 
@@ -599,22 +511,6 @@ function closeModal() {
 // DRILL-DOWN: Shift Employee Detail
 // ============================================================
 function showShiftDetail(vendor, shiftType) {
-<<<<<<< Updated upstream:script-doisoat.js
-    let shiftLabel = 'Ca 1';
-    let shiftIconCls = 'day';
-    let shiftBxIcon = 'bxs-sun';
-    let shiftColor = '#FCD34D';
-    let shiftSub = 'CA 1 · HC';
-
-    if (shiftType === 'ca2') {
-        shiftLabel = 'Ca 2';
-        shiftIconCls = 'day';
-        shiftBxIcon = 'bxs-brightness-half';
-        shiftColor = '#F59E0B';
-        shiftSub = 'CA 2';
-    } else if (shiftType === 'ca3') {
-        shiftLabel = 'Ca 3';
-=======
     let shiftLabel = 'Ca ngày';
     let shiftIconCls = 'day';
     let shiftBxIcon = 'bxs-sun';
@@ -623,7 +519,6 @@ function showShiftDetail(vendor, shiftType) {
 
     if (shiftType === 'cadem') {
         shiftLabel = 'Ca đêm';
->>>>>>> Stashed changes:update/script-doisoat.js
         shiftIconCls = 'night';
         shiftBxIcon = 'bxs-moon';
         shiftColor = '#818CF8';
@@ -633,14 +528,8 @@ function showShiftDetail(vendor, shiftType) {
     const employees = productionData.filter(item => {
         if (normalizeVendor(getVal(item, 'dept'), item) !== vendor) return false;
         const s = (getVal(item, 'shift') || '').toUpperCase();
-<<<<<<< Updated upstream:script-doisoat.js
-        if (shiftType === 'ca1') return s.includes('1') || s.includes('HC') || s.includes('HÀNH CHÍNH');
-        if (shiftType === 'ca2') return s.includes('2');
-        if (shiftType === 'ca3') return s.includes('3') || s.includes('ĐÊM') || s.includes('DEM');
-=======
         if (shiftType === 'cangay') return s.includes('1') || s.includes('HC') || s.includes('HÀNH CHÍNH') || s.includes('2');
         if (shiftType === 'cadem') return s.includes('3') || s.includes('ĐÊM') || s.includes('DEM');
->>>>>>> Stashed changes:update/script-doisoat.js
         return false;
     });
 
@@ -908,29 +797,20 @@ async function exportToExcel(rows, fileName, summary) {
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-        // Row 5: Ca 3
+        // Row 5: TỔNG SKU PICK (light blue)
         const r5 = summarySheet.getRow(5);
         r5.height = 25;
-        r5.values = [3, 'PICK CA 3 ,ĐÊM', summary.ca3 || 0];
+        r5.values = ['', 'TỔNG SKU PICK', summary.totalSku || 0];
         r5.eachCell({ includeEmpty: true }, (cell, col) => {
-            applyStyle(cell, normalCell);
-            cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
-        });
-
-        // Row 6: TỔNG SKU PICK (light blue)
-        const r6 = summarySheet.getRow(6);
-        r6.height = 25;
-        r6.values = ['', 'TỔNG SKU PICK', summary.totalSku || 0];
-        r6.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, lightBlueFill);
             cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
         });
 
-        // Row 7: TỔNG SỐ TIỀN PHẠT
-        const r7 = summarySheet.getRow(7);
-        r7.height = 25;
-        r7.values = ['', 'TỔNG SỐ TIỀN PHẠT', summary.penalty || 0];
-        r7.eachCell({ includeEmpty: true }, (cell, col) => {
+        // Row 6: TỔNG SỐ TIỀN PHẠT
+        const r6 = summarySheet.getRow(6);
+        r6.height = 25;
+        r6.values = ['', 'TỔNG SỐ TIỀN PHẠT', summary.penalty || 0];
+        r6.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 2 ? 'left' : (col === 3 ? 'right' : 'center') };
             if (col === 3) cell.numFmt = '#,##0';
@@ -964,7 +844,7 @@ async function exportToExcel(rows, fileName, summary) {
                 shift: getVal(item, 'shift'),
                 timeIn: getVal(item, 'timeIn'),
                 timeOut: getVal(item, 'timeOut'),
-                output:  parseNumericValue(item, 'output')
+                output: parseNumericValue(item, 'output')
             });
             row.height = 20;
             row.eachCell({ includeEmpty: true }, (cell, col) => {

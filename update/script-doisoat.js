@@ -25,7 +25,6 @@ let _penaltyLoaded = false;
 // KEYWORD MAPPING (Adopted from script-pa.js for robustness)
 // ============================================================
 const KEY_FIELDS = {
-<<<<<<< Updated upstream:script-doisoat.js
     name:    ['HỌ VÀ TÊN', 'HO VA TEN', 'TEN', 'NAME', 'TÊN', 'NHÂN VIÊN', 'NHAN VIEN'],
     msnv:    ['MÃ NV', 'MA NV', 'MSNV', 'EMPLOYEE ID', 'MÃ NHÂN VIÊN', 'ID'],
     dept:    ['BỘ PHẬN', 'BO PHAN', 'VỊ TRÍ', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHẬN'],
@@ -35,17 +34,6 @@ const KEY_FIELDS = {
     penalty: ['SỐ TIỀN PHẠT', 'SO TIEN PHAT', 'SỐ TIỀN PH', 'PHAT', 'PENALTY', 'TIỀN PHẠT'],
     timeIn:  ['GIờ VÀO', 'GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
     timeOut: ['GIờ RA', 'GIO RA', 'OUT TIME', 'CHECK OUT', 'RA'],
-=======
-    name: ['HO VA TEN', 'HO TEN', 'TEN', 'NAME', 'NHAN VIEN'],
-    msnv: ['MA NV', 'MSNV', 'EMPLOYEE ID', 'MA NHAN VIEN', 'ID'],
-    dept: ['BO PHAN', 'VI TRI', 'DEPARTMENT', 'VENDOR', 'BP', 'PHAN'],
-    shift: ['CA LAM', 'CA', 'SHIFT', 'KIP'],
-    output: ['SAN LUONG', 'QUANTITY', 'OUTPUT', 'THUC TE'],
-    date: ['NGAY', 'DATE', 'TIME'],
-    penalty: ['SO TIEN PHAT', 'SO TIEN PH', 'PHAT', 'PENALTY', 'TIEN PHAT'],
-    timeIn: ['GIO VAO', 'IN TIME', 'CHECK IN', 'VAO'],
-    timeOut: ['GIO RA', 'OUT TIME', 'CHECK OUT'],
->>>>>>> Stashed changes:update/script-doisoat.js
 };
 
 // ============================================================
@@ -797,15 +785,9 @@ function exportAllVendorData() {
     let totalPenalty = 0;
 
     Object.values(vendorAggr).forEach(v => {
-<<<<<<< Updated upstream:script-doisoat.js
-        ca1Total     += v.ca1;
-        ca2Total     += v.ca2;
-        ca3Total     += v.ca3;
-=======
         ca1Total += v.ca1;
         ca2Total += v.ca2;
         ca3Total += v.ca3;
->>>>>>> Stashed changes:update/script-doisoat.js
         totalPenalty += v.penalty;
     });
 
@@ -908,33 +890,19 @@ async function exportToExcel(rows, fileName, summary) {
         hRow.eachCell({ includeEmpty: true }, cell => applyStyle(cell, blueHeader));
 
 
-<<<<<<< Updated upstream:script-doisoat.js
-        // Row 3: Ca 1
-        const r3 = summarySheet.getRow(3);
-        r3.height = 25;
-        r3.values = [1, 'PICK CA 1 ,HC', summary.ca1 || 0];
-=======
         // Row 3: Ca 1, HC, Ca 2
         const r3 = summarySheet.getRow(3);
         r3.height = 25;
         r3.values = [1, 'SKU CA 1 ,HC , CA 2', (summary.ca1 || 0) + (summary.ca2 || 0)];
->>>>>>> Stashed changes:update/script-doisoat.js
         r3.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
         });
 
-<<<<<<< Updated upstream:script-doisoat.js
-        // Row 4: Ca 2
-        const r4 = summarySheet.getRow(4);
-        r4.height = 25;
-        r4.values = [2, 'PICK CA 2', summary.ca2 || 0];
-=======
         // Row 4: Ca 3
         const r4 = summarySheet.getRow(4);
         r4.height = 25;
         r4.values = [2, 'SKU CA 3', summary.ca3 || 0];
->>>>>>> Stashed changes:update/script-doisoat.js
         r4.eachCell({ includeEmpty: true }, (cell, col) => {
             applyStyle(cell, normalCell);
             cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'center' : col === 2 ? 'left' : 'right' };
@@ -996,11 +964,7 @@ async function exportToExcel(rows, fileName, summary) {
                 shift: getVal(item, 'shift'),
                 timeIn: getVal(item, 'timeIn'),
                 timeOut: getVal(item, 'timeOut'),
-<<<<<<< Updated upstream:script-doisoat.js
                 output:  parseNumericValue(item, 'output')
-=======
-                output: parseNumericValue(item, 'output')
->>>>>>> Stashed changes:update/script-doisoat.js
             });
             row.height = 20;
             row.eachCell({ includeEmpty: true }, (cell, col) => {

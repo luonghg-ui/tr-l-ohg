@@ -327,3 +327,68 @@ td { padding: 16px 24px; vertical-align: middle; color: var(--text); }
 .text-success { color: #34D399; }
 .text-warning { color: #FCD34D; }
 .text-danger { color: #F87171; }
+
+/* ── MODAL KEY FIELDS (BENTO GRID) ── */
+.modal-key-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.modal-key-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 20px 16px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-key-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-key-card.accent-blue { border-left: 4px solid #6366f1; }
+.modal-key-card.accent-yellow { border-left: 4px solid #F59E0B; }
+.modal-key-card.accent-green { border-left: 4px solid #10B981; }
+
+.modal-key-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.modal-key-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    font-family: var(--font-display);
+}
+
+.badge-shelf {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818CF8;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.banner.loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}

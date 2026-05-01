@@ -647,9 +647,37 @@ function toggleSettings() {
 }
 
 async function saveToken() {
-  const sid = document.getElementById('sidInput').value.trim();
-  const token = document.getElementById('tokenInput').value.trim();
-  if (!sid || !token) { alert('Vui lòng nhập SID và Token'); return; }
+  let sidRaw = document.getElementById('sidInput').value.trim();
+  let tokenRaw = document.getElementById('tokenInput').value.trim();
+  
+  let sid = sidRaw;
+  let token = tokenRaw;
+
+  // Helper to extract value from cookie string
+  const extract = (str, key) => {
+    const m = str.match(new RegExp('(?:^|;\\s*)' + key + '=([^;]+)'));
+    return m ? m[1] : null;
+  };
+
+  // If user pasted raw cookie string
+  const fullCookie = sidRaw + "; " + tokenRaw;
+  if (fullCookie.includes('SID=')) {
+    const extractedSid = extract(fullCookie, 'SID');
+    if (extractedSid) sid = extractedSid;
+  }
+  if (fullCookie.includes('session_token=')) {
+    const extractedToken = extract(fullCookie, 'session_token');
+    if (extractedToken) token = extractedToken;
+  }
+
+  document.getElementById('sidInput').value = sid;
+  document.getElementById('tokenInput').value = token;
+
+  if (!sid || !token || sid.startsWith('http')) { 
+    alert('Vui lòng nhập SID và Token hợp lệ (không dán đường link).'); 
+    return; 
+  }
+
   try {
     const r = await fetch(PROXY() + '/update-token', {
       method: 'POST',
@@ -659,7 +687,7 @@ async function saveToken() {
     const d = await r.json();
     alert(d.ok ? '✅ Cập nhật token thành công!' : '❌ Lỗi: ' + d.message);
   } catch(e) {
-    alert('❌ Không kết nối được proxy: ' + e.message);
+    alert('❌ Không kết nối được proxy: ' + e.message + '\n\nVui lòng đảm bảo server proxy đang chạy bằng lệnh: node start-proxy.cjs');
   }
 }
 
@@ -921,12 +949,17 @@ function renderModal(sku, d) {
     return diff < 90 ? 'exp-warn' : 'exp-ok';
   }
 
+  const isDrug = sd.productType && sd.productType.includes('DRUG');
+  const typeLabel = isDrug ? 'Thuốc' : 'Thường';
+  const typeColor = isDrug ? 'var(--yellow)' : 'var(--text-muted)';
+
   document.getElementById('detailBody').innerHTML = `
     <div class="stat-row">
       <div class="stat-chip"><div class="sv" style="color:var(--green)">${Number(sd.availableQuantity||0).toLocaleString()}</div><div class="sl">Có sẵn</div></div>
       <div class="stat-chip"><div class="sv" style="color:var(--yellow)">${Number(sd.onHoldQuantity||0).toLocaleString()}</div><div class="sl">Đang giữ</div></div>
       <div class="stat-chip"><div class="sv">${locCount}</div><div class="sl">Kệ có hàng</div></div>
       <div class="stat-chip"><div class="sv" style="color:${clsColor}">${cls}</div><div class="sl">Phân loại</div></div>
+      <div class="stat-chip"><div class="sv" style="color:${typeColor}; font-size:14px; margin-top:4px;">${typeLabel}</div><div class="sl">Loại SP</div></div>
     </div>
 
     <div class="modal-section-title">📦 Vị trí kệ có hàng (${activeLocs.length})</div>

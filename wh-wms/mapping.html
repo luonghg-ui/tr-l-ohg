@@ -375,9 +375,9 @@
             const typeTag = first.groupName && first.groupName.toLowerCase().includes('thuốc') ? '<div class="modal-sku-tag">Thuốc</div>' : '';
 
             header.innerHTML = `
-                <img src="${img}" class="modal-product-img" style="width:100px; height:100px;" onerror="this.style.display='none'">
+                <img src="${img}" class="modal-product-img" onerror="this.style.display='none'">
                 <div style="flex:1">
-                    <h3 class="modal-product-name" style="font-size:1.5rem;">${name}</h3>
+                    <h3 class="modal-product-name">${name}</h3>
                     <div style="display:flex; gap:12px; align-items:center;">
                         <span class="name-sku" style="font-size:0.9rem; padding:4px 12px;">${sku}</span>
                         ${first.availableQuantity < 0 ? `<span class="badge-missing">THIẾU ${first.availableQuantity}</span>` : ''}
@@ -386,50 +386,44 @@
                 <button class="modal-close" onclick="closeModal(null)"><i class='bx bx-x'></i></button>`;
 
             let statsHtml = `
-                <div class="data-field-row">
-                    <span class="data-field-label">Số tiền còn lại</span>
-                    <span class="data-field-dots"></span>
-                    <span class="data-field-value">-333.282</span>
-                </div>
-                <div class="data-field-row">
-                    <span class="data-field-label">Vị trí ghi nhận</span>
-                    <span class="data-field-dots"></span>
-                    <span class="data-field-value">—</span>
+                <div class="modal-realtime-box" style="background:transparent; padding:0; border:none; margin-top:0;">
+                    <div class="data-field-row"><span class="data-field-label">Số tiền còn lại</span><span class="data-field-dots"></span><span class="data-field-value">-333.282</span></div>
+                    <div class="data-field-row"><span class="data-field-label">Vị trí ghi nhận</span><span class="data-field-dots"></span><span class="data-field-value">—</span></div>
                 </div>
 
                 <div class="modal-realtime-box">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                        <h4 style="font-size:0.85rem; font-weight:700; color:#fff;">Dữ liệu WMS thời gian thực</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                        <h4 style="font-size:1rem; font-weight:800; color:#fff;">Dữ liệu WMS thời gian thực</h4>
                         ${typeTag}
                     </div>
                     
-                    <div class="modal-key-fields" style="grid-template-columns: repeat(4, 1fr); gap:12px;">
-                        <div class="modal-key-card" style="padding:16px 8px;">
-                            <div class="modal-key-value" style="font-size:1.5rem; color:#34D399;">${first.totalQuantity || 0}</div>
-                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">CÓ SẴN (WMS)</div>
+                    <div class="modal-key-fields four-cols">
+                        <div class="modal-key-card accent-green">
+                            <div class="modal-key-value">${first.totalQuantity || 0}</div>
+                            <div class="modal-key-label">CÓ SẴN (WMS)</div>
                         </div>
-                        <div class="modal-key-card" style="padding:16px 8px;">
-                            <div class="modal-key-value" style="font-size:1.5rem; color:#FCD34D;">${first.pendingQuantity || 0}</div>
-                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">ĐANG GIỮ</div>
+                        <div class="modal-key-card accent-yellow">
+                            <div class="modal-key-value">${first.pendingQuantity || 0}</div>
+                            <div class="modal-key-label">ĐANG GIỮ</div>
                         </div>
-                        <div class="modal-key-card" style="padding:16px 8px;">
-                            <div class="modal-key-value" style="font-size:1.5rem; color:#818CF8;">${first.locations ? first.locations.length : 0}</div>
-                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">KỆ CÓ HÀNG</div>
+                        <div class="modal-key-card accent-blue">
+                            <div class="modal-key-value">${first.locations ? first.locations.length : 0}</div>
+                            <div class="modal-key-label">KỆ CÓ HÀNG</div>
                         </div>
-                        <div class="modal-key-card" style="padding:16px 8px;">
-                            <div class="modal-key-value" style="font-size:1.5rem; color:#A78BFA;">A</div>
-                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">PHÂN LOẠI</div>
+                        <div class="modal-key-card accent-purple">
+                            <div class="modal-key-value">A</div>
+                            <div class="modal-key-label">PHÂN LOẠI</div>
                         </div>
                     </div>
 
-                    <div style="margin-top:24px;">
-                        <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
+                    <div style="margin-top:10px;">
+                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                             <i class='bx bx-package' style="color:#F59E0B"></i> VỊ TRÍ KỆ CÓ HÀNG (${first.locations ? first.locations.length : 0})
                         </div>
                         <table class="modal-table-premium">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left;">Kệ</th>
+                                    <th>Kệ</th>
                                     <th style="text-align:center;">Tồn kho</th>
                                     <th style="text-align:center;">Có sẵn</th>
                                     <th style="text-align:center;">Giữ</th>
@@ -438,7 +432,7 @@
                             <tbody>
                                 ${first.locations ? first.locations.map(l => `
                                     <tr>
-                                        <td><span class="badge-shelf" style="font-size:0.7rem;">${l.code}</span></td>
+                                        <td><span class="badge-shelf">${l.code}</span></td>
                                         <td style="text-align:center; font-weight:700;">${l.quantity}</td>
                                         <td style="text-align:center; color:#34D399; font-weight:700;">${l.quantity}</td>
                                         <td style="text-align:center; color:#FCD34D; font-weight:700;">0</td>

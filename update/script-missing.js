@@ -423,30 +423,87 @@ function goPage(p) { currentPage = p; renderPage(); window.scrollTo(0,0); }
 
 function setupSort() {
     ['thName', 'thSys', 'thAct', 'thGap'].forEach(id => {
-        document.getElementById(id).onclick = (e) => {
-            const col = e.currentTarget.dataset.col;
-            sortDir = (sortCol === col && sortDir === 'asc') ? 'desc' : 'asc';
-            sortCol = col;
-            applyFilter();
-            
-            // update sort icon visual
-            document.querySelectorAll('th').forEach(th => { th.classList.remove('asc','desc'); });
-            e.currentTarget.classList.add(sortDir);
-        };
+        const el = document.getElementById(id);
+        if (el) {
+            el.onclick = (e) => {
+                const col = e.currentTarget.dataset.col;
+                sortDir = (sortCol === col && sortDir === 'asc') ? 'desc' : 'asc';
+                sortCol = col;
+                applyFilter();
+                
+                // update sort icon visual
+                document.querySelectorAll('th').forEach(th => { th.classList.remove('asc','desc'); });
+                e.currentTarget.classList.add(sortDir);
+            };
+        }
     });
 }
 
-function setControls(en) { [searchInput, gapFilter].forEach(el => el.disabled = !en); }
+function setControls(en) { [searchInput, gapFilter].forEach(el => { if(el) el.disabled = !en; }); }
 
 // ============================================================
 // MODAL LOGIC
 // ============================================================
-function openModal(idx) {
+async function openModal(idx) {
     const item = filtered[idx];
     if (!item) return;
+    const sku = (getSKU(item) || '').trim();
 
+    // Hiển thị modal ngay lập tức
+    modalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Render ban đầu với trạng thái loading cho phần dữ liệu WMS
+    renderModalContent(item, null);
+
+    if (sku) {
+        try {
+            // Fetch đồng thời cả chi tiết SKU và lịch sử mapping
+            // Mặc định Group BUYMED và Kho HN
+            const [detailRes, historyRes] = await Promise.all([
+                fetch(`http://localhost:3000/wms/sku-detail?sku=${encodeURIComponent(sku)}&group=BUYMED&warehouse=HN`).catch(() => null),
+                fetch(`http://localhost:3000/wms/mapping-history?sku=${encodeURIComponent(sku)}`).catch(() => null)
+            ]);
+
+            let wmsData = null;
+            let histories = [];
+
+            if (detailRes && detailRes.ok) {
+                const detailJson = await detailRes.json();
+                if (detailJson.ok) wmsData = detailJson;
+            }
+
+            if (historyRes && historyRes.ok) {
+                const historyJson = await historyRes.json();
+                histories = historyJson.data || [];
+            }
+
+            renderModalContent(item, histories, wmsData);
+        } catch (e) {
+            console.error("Fetch SKU info error", e);
+            renderModalContent(item, [], null);
+        }
+    } else {
+        renderModalContent(item, [], null);
+    }
+}
+
+function isAllowedLocation(code) {
+    if (!code) return false;
+    // Cho phép hầu hết các loại vị trí kệ trong kho
+    return true;
+}
+
+window.copyLoc = function(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const old = btn.innerHTML;
+        btn.innerHTML = '<i class=\'bx bx-check\' style=\'color:#34D399\'></i>';
+        setTimeout(() => btn.innerHTML = old, 1500);
+    });
+};
+
+function renderModalContent(item, histories, wmsData) {
     const img = getImg(item) || 'https://placehold.co/72x72/1e293b/4f46e5?text=?';
-
     const isOk = item._gap === 0;
     const isMissing = item._gap < 0; 
     const badgeClass = isOk ? 'ok' : (isMissing ? 'missing' : 'surplus');
@@ -463,14 +520,155 @@ function openModal(idx) {
         </div>`;
 
     const formatN = (num) => {
-        if (!num) return '0';
-        return num.toLocaleString('vi-VN');
+        if (num === undefined || num === null || num === '') return '0';
+        return parseFloat(num.toString().replace(/,/g,'')).toLocaleString('vi-VN');
     };
 
+    // --- SECTION 1: GOOGLE SHEET DATA ---
     const money = formatN(item._moneyTotal);
     const moneyOut = formatN(item._moneyOutTotal);
     const moneyRemain = formatN(item._moneyRemainTotal);
-    const loc = getLocation(item) || '—';
+    const locSheet = getLocation(item) || '—';
+
+    // --- SECTION 2: WMS DATA (If available) ---
+    let wmsStatsHTML = '';
+    let wmsLocsHTML = '';
+    let wmsLotsHTML = '';
+
+    if (wmsData === null && histories === null) {
+        wmsStatsHTML = `<div class="modal-loading-box"><div class="spinner"></div><span>Đang đồng bộ dữ liệu từ WMS...</span></div>`;
+    } else if (wmsData) {
+        const sd = wmsData.skuData || {};
+        const locs = wmsData.skuLocations || [];
+        const lots = wmsData.skuLotDate || [];
+        
+        // WMS Stats Chips
+        const cls = sd.classification || '—';
+        const clsColor = cls === 'A' ? '#34D399' : cls === 'B' ? '#FCD34D' : 'var(--text-muted)';
+        const locWithStock = locs.filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode)).length;
+
+        // Loại sản phẩm
+        const typeMap = {
+            'DRUG': 'Thuốc',
+            'SUPPLEMENT': 'TPCN',
+            'COSMETIC': 'Mỹ phẩm',
+            'MEDICAL_DEVICE': 'Vật tư',
+            'EQUIPMENT': 'Thiết bị'
+        };
+        const typeText = typeMap[sd.productType] || sd.productType || '—';
+        const typeColor = (sd.productType === 'DRUG') ? '#f37021' : '#6366f1';
+
+        wmsStatsHTML = `
+        <div class="stat-chip-container">
+            <div class="stat-chip"><div class="stat-chip-val" style="color:#34D399">${formatN(sd.availableQuantity)}</div><div class="stat-chip-lbl">Có sẵn (WMS)</div></div>
+            <div class="stat-chip"><div class="stat-chip-val" style="color:#FCD34D">${formatN(sd.onHoldQuantity)}</div><div class="stat-chip-lbl">Đang giữ</div></div>
+            <div class="stat-chip"><div class="stat-chip-val">${locWithStock}</div><div class="stat-chip-lbl">Kệ có hàng</div></div>
+            <div class="stat-chip"><div class="stat-chip-val" style="color:${clsColor}">${cls}</div><div class="stat-chip-lbl">Phân loại</div></div>
+            
+            <div class="stat-chip" style="border: 1px solid ${typeColor}66; background: ${typeColor}11;">
+                <div class="stat-chip-val" style="color:${typeColor}; font-size:14px;">${typeText}</div>
+                <div class="stat-chip-lbl">Loại SP</div>
+            </div>
+        </div>`;
+
+        // WMS Locations Table
+        const activeLocs = locs.filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode))
+                              .sort((a,b) => b.stockQuantity - a.stockQuantity);
+        
+        if (activeLocs.length > 0) {
+            wmsLocsHTML = `
+            <div class="modal-section-title">📦 Vị trí kệ có hàng (${activeLocs.length})</div>
+            <table class="loc-table">
+                <thead><tr><th>Kệ</th><th>Tồn kho</th><th>Có sẵn</th><th>Giữ</th><th>Trạng thái</th><th></th></tr></thead>
+                <tbody>${activeLocs.map(l => `<tr>
+                    <td><span class="badge-loc">${l.locationCode}</span></td>
+                    <td><b>${formatN(l.stockQuantity)}</b></td>
+                    <td style="color:#34D399">${formatN(l.availableQuantity)}</td>
+                    <td style="color:#FCD34D">${formatN(l.onHoldQuantity)}</td>
+                    <td><span class="badge-status">${l.status||'—'}</span></td>
+                    <td><button class="copy-btn" onclick="copyLoc(this,'${l.locationCode}')"><i class='bx bx-copy'></i></button></td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+        }
+
+        // WMS Lots Table
+        const activeLots = lots.filter(l => (l.availableQuantity||0) > 0)
+                               .sort((a,b) => new Date(a.expiredTime) - new Date(b.expiredTime));
+        
+        if (activeLots.length > 0) {
+            const now = new Date();
+            const expClass = (expStr) => {
+                if (!expStr) return '';
+                const diff = (new Date(expStr) - now) / (1000*60*60*24);
+                return diff < 90 ? 'exp-warn' : 'exp-ok';
+            };
+
+            wmsLotsHTML = `
+            <div class="modal-section-title">🗓️ Lot / Hạn sử dụng (${activeLots.length} lot còn hàng)</div>
+            <table class="lot-table">
+                <thead><tr><th>Lot</th><th>HSD</th><th>Nhập</th><th>Xuất</th><th>Có sẵn</th></tr></thead>
+                <tbody>${activeLots.slice(0, 10).map(l => `<tr>
+                    <td><b>${l.lot||'—'}</b></td>
+                    <td class="${expClass(l.expiredTime)}">${l.expiredDate||'—'}</td>
+                    <td>${formatN(l.inQuantity)}</td>
+                    <td>${formatN(l.outQuantity)}</td>
+                    <td style="color:#34D399"><b>${formatN(l.availableQuantity)}</b></td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+        }
+    }
+
+    // --- SECTION 3: HISTORY ---
+    let historyHTML = '';
+    if (histories && histories.length > 0) {
+        historyHTML = `
+        <div class="modal-section-title">🕒 Lịch sử gán vị trí (Gần đây)</div>
+        <table class="history-table">
+            <thead><tr><th>Thời gian</th><th>User / Hành động</th><th>Vị trí</th></tr></thead>
+            <tbody>
+                ${histories.slice(0, 10).map(h => {
+                    // Xử lý thời gian (WMS trả về createdTime thay vì createdAt)
+                    let dateStr = h.createdTime || h.createdAt;
+                    let formattedDate = '—';
+                    if (dateStr) {
+                        const d = new Date(dateStr);
+                        formattedDate = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}`;
+                    }
+
+                    // Xử lý User (Lấy fullname nếu có)
+                    let user = h.fullname || h.username || (h.data && h.data.username);
+                    if (!user && h.accountId) user = `ID: ${h.accountId}`;
+                    if (!user) user = 'Hệ thống';
+
+                    // Xử lý Hành động
+                    let actionName = 'Thao tác';
+                    if (h.templateCode === 'wms-mapping-sku-delete') {
+                        actionName = 'Đã gỡ mapping';
+                    } else if (h.templateCode === 'wms-mapping-sku') {
+                        actionName = 'Đã mapping';
+                    } else {
+                        let rawAction = h.name || (h.data && h.data.type) || 'ACTION';
+                        actionName = (rawAction === 'MAPPING') ? 'Đã mapping' : (rawAction === 'UNMAPPING' ? 'Đã gỡ mapping' : rawAction);
+                    }
+
+                    // Xử lý Vị trí
+                    const location = (h.data && h.data.locationCode) || h.locationCode || '—';
+
+                    return `
+                    <tr>
+                        <td class="history-date">${formattedDate}</td>
+                        <td>
+                            <div class="history-user">${user}</div>
+                            <div class="history-action">${actionName}</div>
+                        </td>
+                        <td><span class="badge-loc">${location}</span></td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+    } else if (histories !== null) {
+        historyHTML = `<div class="modal-section-title">🕒 Lịch sử gán vị trí</div><div style="padding: 10px; color: var(--text-dim); font-size: 13px;">Không có dữ liệu lịch sử.</div>`;
+    }
 
     modalBody.innerHTML = `
     <div class="modal-new-blocks">
@@ -489,32 +687,20 @@ function openModal(idx) {
     </div>
     
     <div class="modal-extra-section">
-        <h4 class="extra-title-text">Chi tiết bổ sung</h4>
-        
-        <div class="extra-row">
-            <span class="extra-lbl">Số tiền</span>
-            <div class="extra-line"></div>
-            <span class="extra-val">${money}</span>
-        </div>
-        <div class="extra-row">
-            <span class="extra-lbl">Số tiền đã Out</span>
-            <div class="extra-line"></div>
-            <span class="extra-val">${moneyOut}</span>
-        </div>
-        <div class="extra-row">
-            <span class="extra-lbl">Số tiền còn lại</span>
-            <div class="extra-line"></div>
-            <span class="extra-val">${moneyRemain}</span>
-        </div>
-        <div class="extra-row">
-            <span class="extra-lbl">Vị trí</span>
-            <div class="extra-line"></div>
-            <span class="extra-val">${loc}</span>
-        </div>
+        <h4 class="extra-title-text">Chi tiết bổ sung (Google Sheet)</h4>
+        <div class="extra-row"><span class="extra-lbl">Số tiền</span><div class="extra-line"></div><span class="extra-val">${money}</span></div>
+        <div class="extra-row"><span class="extra-lbl">Số tiền đã Out</span><div class="extra-line"></div><span class="extra-val">${moneyOut}</span></div>
+        <div class="extra-row"><span class="extra-lbl">Số tiền còn lại</span><div class="extra-line"></div><span class="extra-val">${moneyRemain}</span></div>
+        <div class="extra-row"><span class="extra-lbl">Vị trí ghi nhận</span><div class="extra-line"></div><span class="extra-val">${locSheet}</span></div>
+    </div>
+    
+    <div class="modal-extra-section" style="margin-top: 30px;">
+        <h4 class="extra-title-text">Dữ liệu WMS thời gian thực</h4>
+        ${wmsStatsHTML}
+        ${wmsLocsHTML}
+        ${wmsLotsHTML}
+        ${historyHTML}
     </div>`;
-
-    modalOverlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
 }
 
 function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }

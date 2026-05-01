@@ -1,27 +1,89 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=update/index.html" />
-    <title>Đang chuyển hướng...</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #1a1a2e;
-            color: #fff;
-            margin: 0;
-        }
-        a {
-            color: #818cf8;
-            text-decoration: none;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ Lý Kho Hàng Thuocsi</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Boxicons for icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
-<body>
-    <p>Đang chuyển đến phiên bản mới... Nếu không tự động chuyển hướng, vui lòng <a href="update/index.html">nhấn vào đây</a>.</p>
+
+<body class="chatbot-page">
+    <div class="mesh-bg"></div>
+    <div class="chatbot-container">
+        <header class="chat-header">
+            <div class="brand">
+                <div class="brand-icon"><i class='bx bx-bot'></i></div>
+                <div class="brand-text">
+                    <h1>Trợ Lý Kho Hàng</h1>
+                    <p>Sẵn sàng hỗ trợ tra cứu</p>
+                </div>
+            </div>
+            
+            <nav class="header-nav">
+                <a href="index.html" class="nav-link active">
+                    <i class='bx bx-chat'></i>
+                    <span>Trợ Lý</span>
+                </a>
+                <a href="data-pa.html" class="nav-link">
+                    <i class='bx bx-table'></i>
+                    <span>PA</span>
+                </a>
+                <a href="data-missing.html" class="nav-link">
+                    <i class='bx bx-data'></i>
+                    <span>Missing</span>
+                </a>
+                <a href="doisoat.html" class="nav-link">
+                    <i class='bx bx-shield-quarter'></i>
+                    <span>Đối Soát</span>
+                </a>
+                <button class="btn-sync" id="syncDataBtn" title="Đồng bộ dữ liệu từ hệ thống">
+                    <i class='bx bx-sync'></i>
+                    <span>Cập nhật</span>
+                </button>
+                <button class="btn-refresh-mini" id="refreshDataBtn" title="Tải lại dữ liệu">
+                    <i class='bx bx-refresh'></i>
+                </button>
+            </nav>
+        </header>
+
+        <main class="chat-body" id="chatBody">
+            <div class="message bot-message">
+                <div class="message-content">
+                    <p>Xin chào! Dữ liệu đang được tải về từ hệ thống...</p>
+                    <div class="typing-indicator" id="typingIndicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="chat-footer">
+            <form id="chatForm" autocomplete="off">
+                <div class="input-container">
+                    <i class='bx bx-search search-icon'></i>
+                    <input type="text" id="userInput" placeholder="Nhập MÃ SKU hoặc Tên sản phẩm..." disabled>
+                    <button type="submit" id="sendBtn" class="send-btn" disabled>
+                        <i class='bx bx-send'></i>
+                    </button>
+                </div>
+            </form>
+        </footer>
+    </div>
+    <script src="script-sync.js"></script>
+    <script src="script.js"></script>
+    <div id="statusBanner" style="display:none;">
+        <div class="banner loading" id="bannerInner">
+            <i class='bx bx-loader-alt bx-spin'></i>
+            <span>Đang xử lý...</span>
+        </div>
+    </div>
 </body>
+
 </html>

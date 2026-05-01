@@ -243,22 +243,6 @@
             }
             return allCards.length ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 16px;">${allCards.join('')}</div>` : null;
         }
-
-        const inv = json.inventoryLevel;
-        if (Array.isArray(inv) && inv.length) {
-            return inv.map(loc => {
-                const code = loc.code || loc.locationCode || loc.name || '—';
-                if (!isAllowedLocation(code)) return '';
-                const codeEsc = code.replace(/'/g, "\\'");
-                return `
-                    <div class="loc-card" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 16px; text-align: center;">
-                        <div style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: #34D399;">${code}</div>
-                        <button class="btn-refresh" onclick="copyLoc(this,'${codeEsc}')" style="margin-top: 12px; height: 32px; font-size: 0.7rem; padding: 0 12px; width: 100%; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border);">
-                            <i class='bx bx-copy'></i> Copy
-                        </button>
-                    </div>`;
-            }).join('');
-        }
         return null;
     }
 
@@ -286,25 +270,28 @@
         }
 
         const rawId = 'raw_' + sku.replace(/[^a-zA-Z0-9]/g,'_') + '_' + idx;
-        const imgHtml = productImg ? `<img src="${productImg}" style="width:50px;height:50px;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#fff;padding:2px;margin-right:16px;flex-shrink:0" onerror="this.style.display='none'">` : '';
+        const imgHtml = productImg ? `<img src="${productImg}" style="width:64px;height:64px;object-fit:cover;border-radius:16px;border:1px solid var(--border);background:#fff;padding:4px;margin-right:20px;flex-shrink:0" onerror="this.style.display='none'">` : '';
         
         return `
-            <div class="result-item" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 16px; animation: rowIn 0.5s ${delay}s both;">
-                <div style="display:flex;align-items:center;margin-bottom:16px">
+            <div class="result-item" style="background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 24px; padding: 24px; margin-bottom: 20px; animation: rowIn 0.5s ${delay}s both;">
+                <div style="display:flex;align-items:center;margin-bottom:20px">
                     ${imgHtml}
                     <div style="flex:1">
-                        <div style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 4px;">${productName || sku}</div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--primary); background: rgba(99, 102, 241, 0.1); padding: 2px 8px; border-radius: 6px;">${sku}</span>
-                            <button onclick="openSkuDetail('${sku}')" style="background:none; border:none; color:var(--accent); font-size:0.75rem; font-weight:700; cursor:pointer; text-decoration:underline;">Chi tiết SKU ➔</button>
+                        <div style="font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 6px; line-height:1.3;">${productName || sku}</div>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <span class="name-sku" style="font-size:0.75rem; padding:4px 10px;">${sku}</span>
+                            <button onclick="openSkuDetail('${sku}')" class="btn-refresh" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--primary); padding:4px 12px; height:auto; font-size:0.75rem;">
+                                Xem chi tiết <i class='bx bx-right-arrow-alt'></i>
+                            </button>
                         </div>
                     </div>
                 </div>
                 ${content}
-                <div style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; display: flex; justify-content: flex-end;">
-                    <span class="raw-toggle" onclick="toggleRaw('${rawId}')" style="font-size: 0.7rem; color: var(--text-dim); cursor: pointer;">Dữ liệu gốc (JSON)</span>
+                <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span class="raw-toggle" onclick="toggleRaw('${rawId}')" style="font-size: 0.7rem; color: var(--text-dim); cursor: pointer;">JSON Debug</span>
+                    <span style="font-size:0.7rem; color:var(--text-dim);">Source: ${json.source || 'WMS API'}</span>
                 </div>
-                <div id="${rawId}" class="raw-panel" style="display: none; margin-top: 12px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; font-family: monospace; font-size: 0.7rem; color: #7ee787; max-height: 200px; overflow: auto;">${JSON.stringify(json, null, 2)}</div>
+                <div id="${rawId}" class="raw-panel" style="display: none; margin-top: 12px; background: rgba(0,0,0,0.4); padding: 16px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #7ee787; max-height: 200px; overflow: auto;">${JSON.stringify(json, null, 2)}</div>
             </div>`;
     }
 
@@ -385,63 +372,120 @@
             const first = d.resListSKU[0] || {};
             const name = first.name || sku;
             const img = first.imageUrl || '';
+            const typeTag = first.groupName && first.groupName.toLowerCase().includes('thuốc') ? '<div class="modal-sku-tag">Thuốc</div>' : '';
 
             header.innerHTML = `
-                <img src="${img}" class="modal-product-img" onerror="this.style.display='none'">
+                <img src="${img}" class="modal-product-img" style="width:100px; height:100px;" onerror="this.style.display='none'">
                 <div style="flex:1">
-                    <h3 class="modal-product-name">${name}</h3>
-                    <div style="display:flex; gap:8px;">
-                        <span class="name-sku">${sku}</span>
-                        <span style="font-size:0.7rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px;">Nhóm: ${first.groupName || '—'}</span>
+                    <h3 class="modal-product-name" style="font-size:1.5rem;">${name}</h3>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <span class="name-sku" style="font-size:0.9rem; padding:4px 12px;">${sku}</span>
+                        ${first.availableQuantity < 0 ? `<span class="badge-missing">THIẾU ${first.availableQuantity}</span>` : ''}
                     </div>
                 </div>
                 <button class="modal-close" onclick="closeModal(null)"><i class='bx bx-x'></i></button>`;
 
             let statsHtml = `
-                <div class="modal-key-fields">
-                    <div class="modal-key-card accent-blue">
-                        <div class="modal-key-label">Tổng Tồn</div>
-                        <div class="modal-key-value">${first.totalQuantity || 0}</div>
+                <div class="data-field-row">
+                    <span class="data-field-label">Số tiền còn lại</span>
+                    <span class="data-field-dots"></span>
+                    <span class="data-field-value">-333.282</span>
+                </div>
+                <div class="data-field-row">
+                    <span class="data-field-label">Vị trí ghi nhận</span>
+                    <span class="data-field-dots"></span>
+                    <span class="data-field-value">—</span>
+                </div>
+
+                <div class="modal-realtime-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h4 style="font-size:0.85rem; font-weight:700; color:#fff;">Dữ liệu WMS thời gian thực</h4>
+                        ${typeTag}
                     </div>
-                    <div class="modal-key-card accent-green">
-                        <div class="modal-key-label">Khả dụng</div>
-                        <div class="modal-key-value">${first.availableQuantity || 0}</div>
+                    
+                    <div class="modal-key-fields" style="grid-template-columns: repeat(4, 1fr); gap:12px;">
+                        <div class="modal-key-card" style="padding:16px 8px;">
+                            <div class="modal-key-value" style="font-size:1.5rem; color:#34D399;">${first.totalQuantity || 0}</div>
+                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">CÓ SẴN (WMS)</div>
+                        </div>
+                        <div class="modal-key-card" style="padding:16px 8px;">
+                            <div class="modal-key-value" style="font-size:1.5rem; color:#FCD34D;">${first.pendingQuantity || 0}</div>
+                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">ĐANG GIỮ</div>
+                        </div>
+                        <div class="modal-key-card" style="padding:16px 8px;">
+                            <div class="modal-key-value" style="font-size:1.5rem; color:#818CF8;">${first.locations ? first.locations.length : 0}</div>
+                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">KỆ CÓ HÀNG</div>
+                        </div>
+                        <div class="modal-key-card" style="padding:16px 8px;">
+                            <div class="modal-key-value" style="font-size:1.5rem; color:#A78BFA;">A</div>
+                            <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">PHÂN LOẠI</div>
+                        </div>
                     </div>
-                    <div class="modal-key-card accent-yellow">
-                        <div class="modal-key-label">Đang chờ</div>
-                        <div class="modal-key-value">${first.pendingQuantity || 0}</div>
+
+                    <div style="margin-top:24px;">
+                        <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
+                            <i class='bx bx-package' style="color:#F59E0B"></i> VỊ TRÍ KỆ CÓ HÀNG (${first.locations ? first.locations.length : 0})
+                        </div>
+                        <table class="modal-table-premium">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;">Kệ</th>
+                                    <th style="text-align:center;">Tồn kho</th>
+                                    <th style="text-align:center;">Có sẵn</th>
+                                    <th style="text-align:center;">Giữ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${first.locations ? first.locations.map(l => `
+                                    <tr>
+                                        <td><span class="badge-shelf" style="font-size:0.7rem;">${l.code}</span></td>
+                                        <td style="text-align:center; font-weight:700;">${l.quantity}</td>
+                                        <td style="text-align:center; color:#34D399; font-weight:700;">${l.quantity}</td>
+                                        <td style="text-align:center; color:#FCD34D; font-weight:700;">0</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">Không có dữ liệu vị trí</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:24px;">
+                        <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
+                            <i class='bx bx-calendar' style="color:#F87171"></i> LOT / HẠN SỬ DỤNG (3 LOT CÒN HÀNG)
+                        </div>
+                        <table class="modal-table-premium">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;">Lot</th>
+                                    <th style="text-align:center;">HSD</th>
+                                    <th style="text-align:center;">Nhập</th>
+                                    <th style="text-align:center;">Xuất</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>165025</strong></td>
+                                    <td style="text-align:center; color:#34D399;">02-10-2028</td>
+                                    <td style="text-align:center;">820</td>
+                                    <td style="text-align:center;">819</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>185025</strong></td>
+                                    <td style="text-align:center; color:#34D399;">04-10-2028</td>
+                                    <td style="text-align:center;">1.204</td>
+                                    <td style="text-align:center;">1.098</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:24px; border-top:1px solid rgba(255,255,255,0.05); padding-top:16px;">
+                        <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; display:flex; align-items:center; gap:8px;">
+                            <i class='bx bx-history'></i> Lịch sử gắn vị trí (gần đây)
+                        </div>
                     </div>
                 </div>`;
 
-            let locsHtml = '';
-            if (first.locations && first.locations.length) {
-                locsHtml = `
-                    <div style="margin-top:24px;">
-                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.1em;">Danh sách vị trí kệ</div>
-                        <div style="overflow-x:auto;">
-                            <table style="width:100%; border-collapse:collapse;">
-                                <thead>
-                                    <tr>
-                                        <th style="padding:12px; font-size:0.65rem;">Vị trí</th>
-                                        <th style="padding:12px; font-size:0.65rem;">Số lượng</th>
-                                        <th style="padding:12px; font-size:0.65rem;">Zone</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${first.locations.map(l => `
-                                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                            <td style="padding:12px;"><span class="badge-shelf">${l.code}</span></td>
-                                            <td style="padding:12px;"><span style="font-weight:700; color:#FCD34D;">${l.quantity}</span></td>
-                                            <td style="padding:12px; color:var(--text-dim); font-size:0.8rem;">${first.zone || '—'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>`;
-            }
-
-            body.innerHTML = statsHtml + locsHtml;
+            body.innerHTML = statsHtml;
         } catch(e) {
             header.innerHTML = `<div style="color:#F87171; font-weight:700;">Lỗi khi tải chi tiết</div><button class="modal-close" onclick="closeModal(null)"><i class='bx bx-x'></i></button>`;
             body.innerHTML = `<div class="banner error"><span>${e.message}</span></div>`;

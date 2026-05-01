@@ -255,3 +255,75 @@ td { padding: 16px 24px; vertical-align: middle; color: var(--text); }
     .stat-value { font-size: 2rem; }
     .toolbar { padding: 16px; gap: 10px; }
 }
+
+/* ── NEW PREMIUM COMPONENTS (WMS MODAL) ── */
+.modal-sku-tag {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 2px solid #F59E0B;
+    color: #F59E0B;
+    border-radius: 999px;
+    padding: 2px 14px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.modal-realtime-box {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 20px;
+}
+
+.data-field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+}
+
+.data-field-label { color: var(--text-muted); font-weight: 500; }
+.data-field-dots { flex: 1; border-bottom: 1px dotted rgba(255, 255, 255, 0.1); margin: 0 12px; height: 10px; }
+.data-field-value { color: #fff; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+.badge-missing {
+    background: rgba(239, 68, 68, 0.2);
+    color: #FCA5A5;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.modal-table-premium {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.modal-table-premium thead th {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 16px;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-table-premium tbody td {
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.modal-table-premium tr:last-child td { border-bottom: none; }
+
+.text-success { color: #34D399; }
+.text-warning { color: #FCD34D; }
+.text-danger { color: #F87171; }

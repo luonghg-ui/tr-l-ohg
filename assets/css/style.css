@@ -166,65 +166,69 @@ td { padding: 16px 24px; vertical-align: middle; color: var(--text); }
 /* ── MODAL (GLASS) ── */
 .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(3, 7, 18, 0.75); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); display: none; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
 .modal-overlay.open, .modal-overlay.active { display: flex; opacity: 1; }
-.modal-box { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px; width: 100%; max-width: 850px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8); transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.modal-box { background: rgba(18, 28, 48, 0.92); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; width: 100%; max-width: 780px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 50px 120px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04) inset; transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .modal-overlay.open .modal-box, .modal-overlay.active .modal-box { transform: scale(1) translateY(0); }
 
-.modal-header { padding: 30px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.02); display: flex; align-items: center; gap: 24px; position: relative; }
-.modal-product-img { width: 100px; height: 100px; border-radius: 20px; background: #fff; border: 1px solid rgba(255, 255, 255, 0.15); padding: 8px; object-fit: contain; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); flex-shrink: 0; }
-.modal-product-name { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; line-height: 1.35; margin-bottom: 8px; color: #fff; }
+/* ── MODAL HEADER ── */
+.modal-header { padding: 24px 28px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: 20px; position: relative; flex-shrink: 0; }
+.modal-product-img { width: 80px; height: 80px; border-radius: 16px; background: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px; object-fit: contain; flex-shrink: 0; }
+.modal-product-name { font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; line-height: 1.4; margin-bottom: 6px; color: #fff; padding-right: 48px; }
+.modal-close { position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.25s; z-index: 10; flex-shrink: 0; }
+.modal-close:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.3); color: #fff; transform: rotate(90deg); }
 
-/* ── MODAL COMPONENTS (BENTO & TABLES) ── */
-.modal-body { padding: 30px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 28px; }
-.modal-body::-webkit-scrollbar { width: 5px; }
-.modal-body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+/* ── MODAL BODY ── */
+.modal-body { padding: 24px 28px; overflow-y: auto; overflow-x: hidden; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.modal-body::-webkit-scrollbar { width: 4px; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
 
-.modal-key-fields { 
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 16px; 
-}
+/* ── BENTO STAT CARDS ── */
+.modal-key-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; }
+.modal-key-fields.four-cols { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
 
-.modal-key-fields.four-cols {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-.modal-key-card { 
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)); 
-    border: 1px solid rgba(255, 255, 255, 0.08); 
-    border-radius: 24px; 
-    padding: 24px 16px; 
-    text-align: center; 
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.modal-key-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-top: 3px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 18px 12px;
+    text-align: center;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-height: 120px;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s;
+    overflow: hidden;
 }
+.modal-key-card:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); }
+.modal-key-card.accent-blue   { border-top-color: #6366f1; }
+.modal-key-card.accent-yellow { border-top-color: #F59E0B; }
+.modal-key-card.accent-green  { border-top-color: #10B981; }
+.modal-key-card.accent-red    { border-top-color: #EF4444; }
+.modal-key-card.accent-purple { border-top-color: #8B5CF6; }
 
-.modal-key-card:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5); }
+.modal-key-label { font-size: 0.62rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+.modal-key-value { font-size: 1.9rem; font-weight: 900; color: #fff; font-family: var(--font-display); line-height: 1; }
 
-.modal-key-card.accent-red { border-left: 5px solid #F87171; }
-.modal-key-card.accent-green { border-left: 5px solid #34D399; }
-.modal-key-card.accent-yellow { border-left: 5px solid #FCD34D; }
-.modal-key-card.accent-blue { border-left: 5px solid #6366f1; }
-.modal-key-card.accent-purple { border-left: 5px solid #A78BFA; }
+.four-cols .modal-key-card  { padding: 14px 8px; border-radius: 14px; }
+.four-cols .modal-key-value { font-size: 1.45rem; }
+.four-cols .modal-key-label { font-size: 0.58rem; }
 
-.modal-key-label { font-size: 0.7rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; margin-bottom: 10px; }
-.modal-key-value { font-size: 2.2rem; font-weight: 900; color: #fff; font-family: var(--font-display); line-height: 1; }
+.modal-section-label { font-size: 0.65rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.12em; display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+.modal-section-label i { font-size: 0.9rem; }
 
-.four-cols .modal-key-value { font-size: 1.6rem; }
-.four-cols .modal-key-label { font-size: 0.6rem; margin-bottom: 6px; }
-.four-cols .modal-key-card { min-height: 100px; padding: 16px 8px; border-radius: 18px; }
-
-.modal-table-premium { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; }
-.modal-table-premium thead th { background: rgba(0, 0, 0, 0.3); padding: 12px 16px; font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-.modal-table-premium tbody td { padding: 14px 16px; font-size: 0.85rem; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+.modal-extra-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 18px 20px; }
+.modal-wms-box { background: rgba(8,16,32,0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+.modal-wms-box-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-wms-box-title { font-size: 0.9rem; font-weight: 800; color: #E2E8F0; }
+.modal-table-wrap { border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+.modal-table-premium { width: 100%; border-collapse: collapse; table-layout: auto; }
+.modal-table-premium thead th { background: rgba(0,0,0,0.3); padding: 10px 14px; font-size: 0.62rem; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+.modal-table-premium tbody td { padding: 12px 14px; font-size: 0.84rem; color: #CBD5E1; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .modal-table-premium tbody tr:last-child td { border-bottom: none; }
-.modal-table-premium tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
-.modal-close { position: absolute; top: 25px; right: 25px; width: 40px; height: 40px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: all 0.3s; z-index: 10; }
-.modal-close:hover { background: rgba(239, 68, 68, 0.2); transform: rotate(90deg); }
+.modal-table-premium tbody tr:hover { background: rgba(255,255,255,0.025); }
+.modal-close { position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.25s; z-index: 10; flex-shrink: 0; }
+.modal-close:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.3); color: #fff; transform: rotate(90deg); }
 .pagination-wrap { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: rgba(255, 255, 255, 0.02); border-top: 1px solid var(--border); }
 .page-info { font-size: 0.82rem; color: var(--text-dim); }
 .page-btns { display: flex; gap: 8px; }

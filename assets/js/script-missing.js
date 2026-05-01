@@ -503,139 +503,174 @@ window.copyLoc = function(btn, text) {
 };
 
 function renderModalContent(item, histories, wmsData) {
-    const img = getImg(item) || 'https://placehold.co/100x100/1e293b/4f46e5?text=?';
+    const img = getImg(item) || 'https://placehold.co/80x80/1e293b/4f46e5?text=?';
     const sku = (getSKU(item) || '').trim();
 
+    // ── HEADER ──────────────────────────────────────────────
     modalHeader.innerHTML = `
-        <img class="modal-product-img" src="${img}" onerror="this.src='https://placehold.co/100x100/1e293b/4f46e5?text=?'">
-        <div style="flex:1">
+        <img class="modal-product-img" src="${img}" onerror="this.src='https://placehold.co/80x80/1e293b/4f46e5?text=?'">
+        <div style="flex:1; min-width:0;">
             <h3 class="modal-product-name">${escapeHTML(getName(item))}</h3>
-            <div style="display:flex; gap:12px; align-items:center;">
-                <span class="name-sku" style="font-size:0.9rem; padding:4px 12px;">${sku || '—'}</span>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <span class="name-sku">${sku || '—'}</span>
                 ${item._gap < 0 ? `<span class="badge-missing">THIẾU ${item._gap}</span>` : ''}
             </div>
         </div>
         <button class="modal-close" onclick="closeModal()"><i class='bx bx-x'></i></button>`;
 
-    const formatN = (num) => {
-        if (num === undefined || num === null || num === '') return '0';
-        return parseFloat(num.toString().replace(/,/g,'')).toLocaleString('vi-VN');
+    // ── HELPERS ──────────────────────────────────────────────
+    const fmt = (num) => {
+        if (num === undefined || num === null || num === '') return '—';
+        const n = parseFloat(num.toString().replace(/,/g,''));
+        return isNaN(n) ? '—' : n.toLocaleString('vi-VN');
     };
 
-    const money = formatN(item._moneyTotal);
-    const moneyOut = formatN(item._moneyOutTotal);
-    const moneyRemain = formatN(item._moneyRemainTotal);
-    const locSheet = getLocation(item) || '—';
+    // ── SHEET DATA ─────────────────────────────────────────
+    const money       = fmt(item._moneyTotal);
+    const moneyOut    = fmt(item._moneyOutTotal);
+    const moneyRemain = fmt(item._moneyRemainTotal);
+    const locSheet    = getLocation(item) || '—';
 
-    let wmsStatsHTML = '';
-    let wmsLocsHTML = '';
-    let wmsLotsHTML = '';
-    let typeTag = '';
+    // ── WMS DATA ───────────────────────────────────────────
+    let wmsBlock = '';
 
     if (wmsData === null && histories === null) {
-        wmsStatsHTML = `<div class="banner loading"><i class='bx bx-loader-alt bx-spin'></i><span>Đang đồng bộ dữ liệu từ WMS...</span></div>`;
+        wmsBlock = `
+            <div class="banner loading">
+                <i class='bx bx-loader-alt bx-spin'></i>
+                <span>Đang đồng bộ dữ liệu WMS...</span>
+            </div>`;
     } else if (wmsData) {
-        const sd = wmsData.skuData || {};
+        const sd   = wmsData.skuData || {};
         const locs = wmsData.skuLocations || [];
         const lots = wmsData.skuLotDate || [];
-        
         const locWithStock = locs.filter(l => (l.stockQuantity||0) > 0).length;
-        const typeMap = { 'DRUG': 'Thuốc', 'SUPPLEMENT': 'TPCN', 'COSMETIC': 'Mỹ phẩm', 'MEDICAL_DEVICE': 'Vật tư', 'EQUIPMENT': 'Thiết bị' };
-        const typeText = typeMap[sd.productType] || sd.productType || 'SP';
-        typeTag = `<div class="modal-sku-tag">${typeText}</div>`;
 
-        wmsStatsHTML = `
+        const typeMap = { 'DRUG': 'Thuốc', 'SUPPLEMENT': 'TPCN', 'COSMETIC': 'Mỹ phẩm', 'MEDICAL_DEVICE': 'Vật tư', 'EQUIPMENT': 'Thiết bị' };
+        const typeLabel = typeMap[sd.productType] || sd.productType || null;
+        const typeTag   = typeLabel ? `<span class="modal-sku-tag">${typeLabel}</span>` : '';
+
+        // 4-col WMS stats
+        const statsGrid = `
             <div class="modal-key-fields four-cols">
                 <div class="modal-key-card accent-green">
-                    <div class="modal-key-value">${formatN(sd.availableQuantity)}</div>
-                    <div class="modal-key-label">CÓ SẴN (WMS)</div>
+                    <div class="modal-key-value" style="color:#34D399">${fmt(sd.availableQuantity)}</div>
+                    <div class="modal-key-label">Có sẵn</div>
                 </div>
                 <div class="modal-key-card accent-yellow">
-                    <div class="modal-key-value">${formatN(sd.onHoldQuantity)}</div>
-                    <div class="modal-key-label">ĐANG GIỮ</div>
+                    <div class="modal-key-value" style="color:#FCD34D">${fmt(sd.onHoldQuantity)}</div>
+                    <div class="modal-key-label">Đang giữ</div>
                 </div>
                 <div class="modal-key-card accent-blue">
-                    <div class="modal-key-value">${locWithStock}</div>
-                    <div class="modal-key-label">KỆ CÓ HÀNG</div>
+                    <div class="modal-key-value" style="color:#818CF8">${locWithStock}</div>
+                    <div class="modal-key-label">Kệ có hàng</div>
                 </div>
                 <div class="modal-key-card accent-purple">
-                    <div class="modal-key-value">${sd.classification || '—'}</div>
-                    <div class="modal-key-label">PHÂN LOẠI</div>
+                    <div class="modal-key-value" style="color:#C4B5FD">${sd.classification || '—'}</div>
+                    <div class="modal-key-label">Phân loại</div>
                 </div>
             </div>`;
 
+        // Shelf table
         const activeLocs = locs.filter(l => (l.stockQuantity||0) > 0).sort((a,b) => b.stockQuantity - a.stockQuantity);
+        let shelfTable = '';
         if (activeLocs.length > 0) {
-            wmsLocsHTML = `
-            <div style="margin-top:10px;">
-                <div style="font-size:0.75rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                    <i class='bx bx-package' style="color:#F59E0B"></i> VỊ TRÍ KỆ CÓ HÀNG (${activeLocs.length})
-                </div>
-                <table class="modal-table-premium">
-                    <thead><tr><th>Kệ</th><th style="text-align:center;">Tồn kho</th><th style="text-align:center;">Có sẵn</th><th style="text-align:center;">Giữ</th></tr></thead>
-                    <tbody>${activeLocs.map(l => `<tr>
-                        <td><span class="badge-shelf">${l.locationCode}</span></td>
-                        <td style="text-align:center; font-weight:700;">${formatN(l.stockQuantity)}</td>
-                        <td style="text-align:center; color:#34D399; font-weight:700;">${formatN(l.availableQuantity)}</td>
-                        <td style="text-align:center; color:#FCD34D; font-weight:700;">${formatN(l.onHoldQuantity)}</td>
-                    </tr>`).join('')}</tbody>
-                </table>
-            </div>`;
+            shelfTable = `
+                <div>
+                    <div class="modal-section-label">
+                        <i class='bx bx-package' style="color:#F59E0B"></i>
+                        Vị trí kệ có hàng (${activeLocs.length})
+                    </div>
+                    <div class="modal-table-wrap">
+                        <table class="modal-table-premium">
+                            <thead><tr>
+                                <th>Kệ</th>
+                                <th style="text-align:right;">Tồn kho</th>
+                                <th style="text-align:right;">Có sẵn</th>
+                                <th style="text-align:right;">Giữ</th>
+                            </tr></thead>
+                            <tbody>
+                                ${activeLocs.map(l => `<tr>
+                                    <td><span class="badge-shelf">${l.locationCode}</span></td>
+                                    <td style="text-align:right; font-weight:700;">${fmt(l.stockQuantity)}</td>
+                                    <td style="text-align:right; color:#34D399; font-weight:700;">${fmt(l.availableQuantity)}</td>
+                                    <td style="text-align:right; color:#FCD34D; font-weight:700;">${fmt(l.onHoldQuantity)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
         }
 
+        // Lot table
         const activeLots = lots.filter(l => (l.availableQuantity||0) > 0).sort((a,b) => new Date(a.expiredTime) - new Date(b.expiredTime));
+        let lotTable = '';
         if (activeLots.length > 0) {
-            wmsLotsHTML = `
-            <div style="margin-top:10px;">
-                <div style="font-size:0.75rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                    <i class='bx bx-calendar' style="color:#F87171"></i> LOT / HẠN SỬ DỤNG (${activeLots.length})
-                </div>
-                <table class="modal-table-premium">
-                    <thead><tr><th>Lot</th><th style="text-align:center;">HSD</th><th style="text-align:center;">Nhập</th><th style="text-align:center;">Xuất</th></tr></thead>
-                    <tbody>${activeLots.slice(0, 10).map(l => `<tr>
-                        <td><strong style="color:#fff;">${l.lot||'—'}</strong></td>
-                        <td style="text-align:center; color:#34D399;">${l.expiredDate||'—'}</td>
-                        <td style="text-align:center;">${formatN(l.inQuantity)}</td>
-                        <td style="text-align:center;">${formatN(l.outQuantity)}</td>
-                    </tr>`).join('')}</tbody>
-                </table>
-            </div>`;
+            lotTable = `
+                <div>
+                    <div class="modal-section-label">
+                        <i class='bx bx-calendar-x' style="color:#F87171"></i>
+                        Lot / Hạn sử dụng (${activeLots.length})
+                    </div>
+                    <div class="modal-table-wrap">
+                        <table class="modal-table-premium">
+                            <thead><tr>
+                                <th>Lot</th>
+                                <th style="text-align:center;">HSD</th>
+                                <th style="text-align:right;">Nhập</th>
+                                <th style="text-align:right;">Xuất</th>
+                            </tr></thead>
+                            <tbody>
+                                ${activeLots.slice(0, 10).map(l => `<tr>
+                                    <td style="font-weight:700; color:#fff;">${l.lot||'—'}</td>
+                                    <td style="text-align:center; color:#34D399;">${l.expiredDate||'—'}</td>
+                                    <td style="text-align:right;">${fmt(l.inQuantity)}</td>
+                                    <td style="text-align:right;">${fmt(l.outQuantity)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
         }
+
+        wmsBlock = `
+            <div class="modal-wms-box">
+                <div class="modal-wms-box-header">
+                    <span class="modal-wms-box-title">Dữ liệu WMS thời gian thực</span>
+                    ${typeTag}
+                </div>
+                ${statsGrid}
+                ${shelfTable}
+                ${lotTable}
+            </div>`;
     }
 
+    // ── RENDER BODY ────────────────────────────────────────
     modalBody.innerHTML = `
-    <div class="modal-key-fields">
-        <div class="modal-key-card accent-blue">
-            <div class="modal-key-label">Cần kiểm</div>
-            <div class="modal-key-value">${item._sys}</div>
+        <div class="modal-key-fields">
+            <div class="modal-key-card accent-blue">
+                <div class="modal-key-value">${fmt(item._sys)}</div>
+                <div class="modal-key-label">Cần kiểm</div>
+            </div>
+            <div class="modal-key-card accent-yellow">
+                <div class="modal-key-value">${fmt(item._act)}</div>
+                <div class="modal-key-label">Đã kiểm</div>
+            </div>
+            <div class="modal-key-card ${item._gap < 0 ? 'accent-red' : 'accent-green'}">
+                <div class="modal-key-value" style="color:${item._gap < 0 ? '#F87171' : '#34D399'}">${item._gap}</div>
+                <div class="modal-key-label">Còn lại</div>
+            </div>
         </div>
-        <div class="modal-key-card accent-yellow">
-            <div class="modal-key-label">Đã kiểm</div>
-            <div class="modal-key-value">${item._act}</div>
+
+        <div class="modal-extra-box">
+            <div class="modal-section-label"><i class='bx bx-spreadsheet' style="color:#818CF8"></i>Chi tiết (Google Sheet)</div>
+            <div class="data-field-row"><span class="data-field-label">Số tiền</span><span class="data-field-dots"></span><span class="data-field-value">${money}</span></div>
+            <div class="data-field-row"><span class="data-field-label">Đã Out</span><span class="data-field-dots"></span><span class="data-field-value">${moneyOut}</span></div>
+            <div class="data-field-row"><span class="data-field-label">Còn lại</span><span class="data-field-dots"></span><span class="data-field-value">${moneyRemain}</span></div>
+            <div class="data-field-row" style="margin-bottom:0"><span class="data-field-label">Vị trí ghi nhận</span><span class="data-field-dots"></span><span class="data-field-value">${locSheet}</span></div>
         </div>
-        <div class="modal-key-card accent-green">
-            <div class="modal-key-label">Còn lại</div>
-            <div class="modal-key-value">${item._gap}</div>
-        </div>
-    </div>
-    
-    <div class="modal-realtime-box" style="background:transparent; padding:0; border:none; margin-top:0;">
-        <h4 style="font-size:0.75rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; margin-bottom:16px; letter-spacing:0.1em;">Chi tiết bổ sung (Google Sheet)</h4>
-        <div class="data-field-row"><span class="data-field-label">Số tiền</span><span class="data-field-dots"></span><span class="data-field-value">${money}</span></div>
-        <div class="data-field-row"><span class="data-field-label">Số tiền đã Out</span><span class="data-field-dots"></span><span class="data-field-value">${moneyOut}</span></div>
-        <div class="data-field-row"><span class="data-field-label">Số tiền còn lại</span><span class="data-field-dots"></span><span class="data-field-value">${moneyRemain}</span></div>
-        <div class="data-field-row"><span class="data-field-label">Vị trí ghi nhận</span><span class="data-field-dots"></span><span class="data-field-value">${locSheet}</span></div>
-    </div>
-    
-    <div class="modal-realtime-box">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-            <h4 style="font-size:1rem; font-weight:800; color:#fff;">Dữ liệu WMS thời gian thực</h4>
-            ${typeTag}
-        </div>
-        ${wmsStatsHTML}
-        ${wmsLocsHTML}
-        ${wmsLotsHTML}
-    </div>`;
+
+        ${wmsBlock}`;
 }
 
 function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }

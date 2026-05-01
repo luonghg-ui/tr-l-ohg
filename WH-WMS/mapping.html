@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WMS — Mapping Vị Trí Kệ</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --accent: #2563eb;
+    --accent-glow: rgba(37,99,235,0.35);
+    --green: #10b981;
+    --green-glow: rgba(16,185,129,0.3);
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37,99,235,0.15), transparent);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  header .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(37,99,235,0.15);
+    border: 1px solid rgba(37,99,235,0.4);
+    color: #60a5fa;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+  }
+  header h1 {
+    font-size: clamp(24px, 5vw, 36px);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  header h1 span { color: #60a5fa; }
+  header p {
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  /* Search box */
+  .search-wrap {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .search-wrap input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .options-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .options-row label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+  .options-row select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 7px 10px;
+    outline: none;
+    cursor: pointer;
+  }
+  .options-row select:focus { border-color: var(--accent); }
+
+  /* Batch SKU */
+  .batch-toggle {
+    font-size: 13px;
+    color: #60a5fa;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+  #batchArea {
+    display: none;
+    margin-bottom: 12px;
+  }
+  #batchArea textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 12px;
+    min-height: 90px;
+    resize: vertical;
+    outline: none;
+  }
+  #batchArea textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  #batchArea textarea::placeholder { color: var(--text-muted); }
+
+  /* History chips */
+  .history-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    min-height: 24px;
+  }
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: #60a5fa; }
+  .history-label { font-size: 11px; color: var(--text-muted); align-self: center; }
+
+  /* Status / spinner */
+  #status {
+    text-align: center;
+    padding: 16px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    display: none;
+  }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results */
+  #results { margin-top: 8px; }
+
+  .result-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    animation: fadeUp .3s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-sku {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .result-sku span { color: #60a5fa; font-family: monospace; font-size: 14px; }
+
+  .locations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .loc-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+    transition: border-color .2s, box-shadow .2s;
+    cursor: default;
+  }
+  .loc-card:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 12px var(--green-glow);
+  }
+  .loc-card .loc-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.5px;
+  }
+  .loc-card .loc-zone {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .loc-card .loc-qty {
+    font-size: 12px;
+    color: var(--yellow);
+    margin-top: 6px;
+    font-weight: 600;
+  }
+  .loc-card .copy-btn {
+    margin-top: 8px;
+    font-size: 11px;
+    padding: 3px 8px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 4px;
+    color: var(--green);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .loc-card .copy-btn:hover { background: rgba(16,185,129,0.25); }
+
+  .no-location {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .no-location .icon { font-size: 32px; margin-bottom: 8px; }
+
+  .err-box {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--red);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  /* Token settings */
+  .settings-toggle {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+  .settings-toggle:hover { color: var(--text); }
+  #settingsPanel {
+    display: none;
+    margin-top: 14px;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  #settingsPanel label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; margin-top: 12px; }
+  #settingsPanel label:first-child { margin-top: 0; }
+  #settingsPanel input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+  }
+  #settingsPanel input:focus { border-color: var(--accent); }
+  #saveTokenBtn { margin-top: 12px; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* Debug raw */
+  .raw-toggle {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-top: 10px;
+    display: inline-block;
+  }
+  .raw-panel {
+    display: none;
+    margin-top: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #7ee787;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  footer {
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* ===== MODAL SKU DETAIL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 720px;
+    animation: fadeUp .25s ease both;
+    flex-shrink: 0;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-img {
+    width: 56px; height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .modal-sub   { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-family: monospace; }
+  .modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background .15s;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-body { padding: 20px 22px; }
+  .modal-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    margin-top: 18px;
+  }
+  .modal-section-title:first-child { margin-top: 0; }
+  /* stat chips */
+  .stat-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .stat-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .stat-chip .sv { font-size: 18px; font-weight: 700; }
+  .stat-chip .sl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  /* location table */
+  .loc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .loc-table th {
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .loc-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    vertical-align: middle;
+  }
+  .loc-table tr:hover td { background: var(--surface2); }
+  .loc-table tr:last-child td { border-bottom: none; }
+  .badge-loc {
+    display: inline-block;
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.35);
+    color: var(--green);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .badge-zero { background: rgba(125,133,144,0.1); border-color: var(--border); color: var(--text-muted); }
+  .badge-status {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(37,99,235,0.12);
+    border: 1px solid rgba(37,99,235,0.3);
+    color: #60a5fa;
+  }
+  /* lot table */
+  .lot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .lot-table th { text-align: left; padding: 6px 8px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .lot-table td { padding: 7px 8px; border-bottom: 1px solid rgba(48,54,61,0.4); }
+  .lot-table tr:last-child td { border-bottom: none; }
+  .exp-warn { color: var(--yellow); }
+  .exp-ok   { color: var(--green); }
+  /* detail btn on result card */
+  .detail-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 12px;
+    padding: 6px 14px;
+    background: rgba(37,99,235,0.12);
+    border: 1px solid rgba(37,99,235,0.35);
+    border-radius: 6px;
+    color: #60a5fa;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .detail-btn:hover { background: rgba(37,99,235,0.25); }
+  .modal-loading { text-align: center; padding: 40px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">🏭 BuyMed WMS</div>
+  <h1>Mapping <span>Vị Trí Kệ</span></h1>
+  <p>Nhập SKU để tìm vị trí lưu trữ trong kho Hà Nội</p>
+</header>
+
+<div class="card">
+  <!-- Options row -->
+  <div class="options-row">
+    <div>
+      <label>Group</label>
+      <select id="groupSel">
+        <option value="BUYMED" selected>BUYMED</option>
+      </select>
+    </div>
+    <div>
+      <label>Kho</label>
+      <select id="warehouseSel">
+        <option value="HN" selected>HN — Hà Nội</option>
+        <option value="HCM">HCM — Hồ Chí Minh</option>
+        <option value="DN">DN — Đà Nẵng</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Single SKU search -->
+  <div class="search-wrap">
+    <input id="skuInput" type="text" placeholder="Nhập SKU... (VD: MEDX.GHKGEQ1P)" autocomplete="off" />
+    <button class="btn btn-primary" id="searchBtn" onclick="searchSingle()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Tìm
+    </button>
+  </div>
+
+  <!-- History -->
+  <div class="history-row" id="historyRow"></div>
+
+  <!-- Batch mode -->
+  <span class="batch-toggle" onclick="toggleBatch()">📋 Nhập nhiều SKU cùng lúc</span>
+  <div id="batchArea">
+    <textarea id="batchInput" placeholder="Mỗi dòng 1 SKU:&#10;MEDX.GHKGEQ1P&#10;MEDX.ABCDEF12&#10;MEDX.XYZXYZ00"></textarea>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="searchBatch()">
+      🔍 Tìm tất cả
+    </button>
+  </div>
+
+  <!-- Status -->
+  <div id="status"></div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <!-- Settings -->
+  <div class="divider"></div>
+  <div class="settings-toggle" onclick="toggleSettings()">
+    ⚙️ Cài đặt token / proxy
+    <span id="settingsArrow">▼</span>
+  </div>
+  <div id="settingsPanel">
+    <label>Proxy URL</label>
+    <input id="proxyUrl" type="text" value="http://localhost:3000" />
+    <label>SID</label>
+    <input id="sidInput" type="text" placeholder="Paste SID token..." />
+    <label>Session Token</label>
+    <input id="tokenInput" type="text" placeholder="Paste session_token..." />
+    <button class="btn btn-primary" id="saveTokenBtn" onclick="saveToken()">💾 Lưu & cập nhật proxy</button>
+  </div>
+</div>
+
+<footer>BuyMed WMS Assistant · Kho Hà Nội · <span id="clock"></span></footer>
+
+<!-- MODAL SKU DETAIL -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+  <div class="modal-box" id="detailBox">
+    <div class="modal-header" id="detailHeader">
+      <div class="modal-loading">Đang tải...</div>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+const PROXY = () => document.getElementById('proxyUrl').value.trim().replace(/\/$/, '');
+let history_ = JSON.parse(localStorage.getItem('wms_sku_history') || '[]');
+let batchOpen = false;
+let settingsOpen = false;
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('vi-VN');
+}, 1000);
+
+// History chips
+function renderHistory() {
+  const row = document.getElementById('historyRow');
+  if (!history_.length) { row.innerHTML = ''; return; }
+  row.innerHTML = '<span class="history-label">Gần đây:</span>' +
+    history_.slice(0, 8).map(s =>
+      `<span class="chip" onclick="document.getElementById('skuInput').value='${s}';searchSingle()">${s}</span>`
+    ).join('');
+}
+renderHistory();
+
+function addHistory(sku) {
+  history_ = [sku, ...history_.filter(s => s !== sku)].slice(0, 20);
+  localStorage.setItem('wms_sku_history', JSON.stringify(history_));
+  renderHistory();
+}
+
+function toggleBatch() {
+  batchOpen = !batchOpen;
+  document.getElementById('batchArea').style.display = batchOpen ? 'block' : 'none';
+}
+
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById('settingsPanel').style.display = settingsOpen ? 'block' : 'none';
+  document.getElementById('settingsArrow').textContent = settingsOpen ? '▲' : '▼';
+}
+
+async function saveToken() {
+  const sid = document.getElementById('sidInput').value.trim();
+  const token = document.getElementById('tokenInput').value.trim();
+  if (!sid || !token) { alert('Vui lòng nhập SID và Token'); return; }
+  try {
+    const r = await fetch(PROXY() + '/update-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sid, token })
+    });
+    const d = await r.json();
+    alert(d.ok ? '✅ Cập nhật token thành công!' : '❌ Lỗi: ' + d.message);
+  } catch(e) {
+    alert('❌ Không kết nối được proxy: ' + e.message);
+  }
+}
+
+function setStatus(msg) {
+  const el = document.getElementById('status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<span class="spinner"></span>${msg}`;
+}
+
+async function fetchMapping(sku) {
+  const group = document.getElementById('groupSel').value;
+  const warehouse = document.getElementById('warehouseSel').value;
+  const url = `${PROXY()}/wms/mapping-location?sku=${encodeURIComponent(sku)}&group=${group}&warehouse=${warehouse}`;
+  const r = await fetch(url);
+  return r.json();
+}
+
+function isAllowedLocation(code) {
+  if (!code) return false;
+  const upper = code.toUpperCase();
+  return upper.startsWith('I1A') || upper.startsWith('WH-LOST') || upper.startsWith('WH-MISSING');
+}
+
+// Parse real API structure: resListSKU[] each has .locations[{code}] and .zone, .name
+function buildLocationCards(json) {
+  // Primary: use resListSKU which contains locations per SKU item
+  const resListSKU = json.resListSKU;
+  if (Array.isArray(resListSKU) && resListSKU.length > 0) {
+    const allCards = [];
+    for (const item of resListSKU) {
+      const zone = item.zone || '';
+      const locs = Array.isArray(item.locations) ? item.locations : [];
+      if (!locs.length) {
+        allCards.push(`<div class="loc-card" style="border-color:rgba(245,158,11,0.4)">
+          <div class="loc-name" style="color:var(--yellow)">—</div>
+          ${zone ? `<div class="loc-zone">Zone: ${zone}</div>` : ''}
+          <div class="loc-zone" style="color:var(--red)">Chưa có kệ</div>
+        </div>`);
+      } else {
+        for (const loc of locs) {
+          const code = loc.code || loc.locationCode || '—';
+          if (!isAllowedLocation(code)) continue;
+
+          const qty  = loc.quantity != null ? loc.quantity : null;
+          const codeEsc = code.replace(/'/g, "\\'");
+          allCards.push(`<div class="loc-card">
+            <div class="loc-name">${code}</div>
+            ${zone ? `<div class="loc-zone">Zone: ${zone}</div>` : ''}
+            ${qty != null ? `<div class="loc-qty">SL: ${qty}</div>` : ''}
+            <button class="copy-btn" onclick="copyLoc(this,'${codeEsc}')">📋 Copy</button>
+          </div>`);
+        }
+      }
+    }
+    return allCards.length ? allCards.join('') : null;
+  }
+
+  // Fallback: inventoryLevel might be a table string or array
+  const inv = json.inventoryLevel;
+  if (Array.isArray(inv) && inv.length) {
+    return inv.map(loc => {
+      const code = loc.code || loc.locationCode || loc.name || '—';
+      if (!isAllowedLocation(code)) return '';
+      const codeEsc = code.replace(/'/g, "\\'");
+      return `<div class="loc-card">
+        <div class="loc-name">${code}</div>
+        <button class="copy-btn" onclick="copyLoc(this,'${codeEsc}')">📋 Copy</button>
+      </div>`;
+    }).join('');
+  }
+
+  return null;
+}
+
+
+function renderResult(sku, json, idx=0) {
+  const delay = idx * 0.07;
+  let content = '';
+
+  // Product info from resListSKU
+  const firstItem = Array.isArray(json.resListSKU) && json.resListSKU[0];
+  const productName = firstItem ? (firstItem.name || '') : '';
+  const productImg  = firstItem ? (firstItem.imageUrl || '') : '';
+
+  if (!json.ok) {
+    content = `<div class="err-box">
+      ⚠️ Không lấy được dữ liệu.<br>
+      <small>Nguồn: ${json.source || 'unknown'} · HTTP ${json.httpStatus || '—'}</small>
+      ${json.bodySnippet ? `<br><small style="color:#7d8590;font-family:monospace">${json.bodySnippet.substring(0,200)}</small>` : ''}
+    </div>`;
+  } else {
+    const cards = buildLocationCards(json);
+    if (cards) {
+      content = `<div class="locations-grid">${cards}</div>`;
+    } else {
+      content = `
+        <div class="no-location">
+          <div class="icon">📭</div>
+          <div>Chưa có vị trí kệ cho SKU này</div>
+        </div>`;
+    }
+  }
+
+  const rawId = 'raw_' + sku.replace(/[^a-zA-Z0-9]/g,'_') + '_' + idx;
+  const imgHtml = productImg ? `<img src="${productImg}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin-right:10px;flex-shrink:0" onerror="this.style.display='none'">` : '';
+  return `
+    <div class="result-item" style="animation-delay:${delay}s">
+      <div style="display:flex;align-items:center;margin-bottom:10px">
+        ${imgHtml}
+        <div>
+          <div class="result-sku">SKU: <span>${sku}</span>
+            <span style="margin-left:8px;font-size:11px;color:var(--text-muted)">Kho: ${json.warehouse||'HN'}</span>
+          </div>
+          ${productName ? `<div style="font-size:13px;color:var(--text);margin-top:2px">${productName}</div>` : ''}
+        </div>
+      </div>
+      ${content}
+      <button class="detail-btn" onclick="openDetail('${sku}')">🔍 Xem chi tiết đầy đủ</button>
+      <span class="raw-toggle" onclick="toggleRaw('${rawId}')">Xem raw JSON</span>
+      <pre class="raw-panel" id="${rawId}">${JSON.stringify(json, null, 2)}</pre>
+    </div>`;
+}
+
+function toggleRaw(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+function copyLoc(btn, code) {
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy'; }, 1500);
+  });
+}
+
+async function searchSingle() {
+  const sku = document.getElementById('skuInput').value.trim().toUpperCase();
+  if (!sku) { document.getElementById('skuInput').focus(); return; }
+
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('results').innerHTML = '';
+  setStatus(`Đang tìm vị trí kệ cho <b>${sku}</b>...`);
+
+  try {
+    const json = await fetchMapping(sku);
+    addHistory(sku);
+    setStatus('');
+    document.getElementById('results').innerHTML = renderResult(sku, json);
+  } catch(e) {
+    setStatus('');
+    document.getElementById('results').innerHTML = `
+      <div class="err-box">❌ Lỗi kết nối proxy: ${e.message}<br>
+      <small>Đảm bảo proxy đang chạy: <code>node start-proxy.cjs</code></small></div>`;
+  } finally {
+    document.getElementById('searchBtn').disabled = false;
+  }
+}
+
+async function searchBatch() {
+  const raw = document.getElementById('batchInput').value.trim();
+  if (!raw) return;
+  const skus = [...new Set(raw.split(/[\n,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean))];
+  if (!skus.length) return;
+
+  document.getElementById('results').innerHTML = '';
+  setStatus(`Đang tìm ${skus.length} SKU...`);
+
+  const out = [];
+  for (let i = 0; i < skus.length; i++) {
+    const sku = skus[i];
+    setStatus(`Đang xử lý ${i+1}/${skus.length}: <b>${sku}</b>`);
+    try {
+      const json = await fetchMapping(sku);
+      addHistory(sku);
+      out.push(renderResult(sku, json, i));
+    } catch(e) {
+      out.push(`<div class="result-item"><div class="result-sku">SKU: <span>${sku}</span></div>
+        <div class="err-box">❌ ${e.message}</div></div>`);
+    }
+    // Small delay to avoid rate-limiting
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  setStatus('');
+  document.getElementById('results').innerHTML = out.join('');
+}
+
+// Enter key
+document.getElementById('skuInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchSingle();
+});
+
+// ===== MODAL SKU DETAIL =====
+async function openDetail(sku) {
+  const group = document.getElementById('groupSel').value;
+  const warehouse = document.getElementById('warehouseSel').value;
+  const modal = document.getElementById('detailModal');
+  document.getElementById('detailHeader').innerHTML = `<div class="modal-loading"><span class="spinner"></span> Đang tải chi tiết ${sku}...</div>`;
+  document.getElementById('detailBody').innerHTML = '';
+  modal.classList.add('open');
+
+  try {
+    const [r, histRes] = await Promise.all([
+      fetch(`${PROXY()}/wms/sku-detail?sku=${encodeURIComponent(sku)}&group=${group}&warehouse=${warehouse}`),
+      fetch(`${PROXY()}/wms/mapping-history?sku=${encodeURIComponent(sku)}`).catch(() => null)
+    ]);
+    const d = await r.json();
+    if (!d.ok) { document.getElementById('detailHeader').innerHTML = `<div class="modal-loading" style="color:var(--red)">❌ Lỗi tải dữ liệu</div>`; return; }
+    
+    if (histRes && histRes.ok) {
+      const histData = await histRes.json();
+      d.mappingHistoryData = histData.data || [];
+    }
+    
+    renderModal(sku, d);
+  } catch(e) {
+    document.getElementById('detailHeader').innerHTML = `<div class="modal-loading" style="color:var(--red)">❌ ${e.message}</div>`;
+  }
+}
+
+function renderModal(sku, d) {
+  const sd   = d.skuData || {};
+  const info = d.skuPhysicalInfo || {};
+  const locs = d.skuLocations || [];
+  const lots = d.skuLotDate || [];
+  const histories = d.mappingHistoryData || d.mappingHistory || d.histories || d.skuHistories || [];
+  const img  = sd.imageUrl || (info.imageUrls && info.imageUrls[0]) || '';
+  const name = info.name || sd.name || sku;
+
+  // Header
+  document.getElementById('detailHeader').innerHTML = `
+    ${img ? `<img src="${img}" class="modal-img" onerror="this.style.display='none'">` : ''}
+    <div>
+      <div class="modal-title">${name}</div>
+      <div class="modal-sub">${sku} · ${d.warehouse}</div>
+    </div>
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>`;
+
+  // Stats
+  const avail = (sd.availableQuantity ?? '—').toLocaleString();
+  const cls   = sd.classification || '—';
+  const clsColor = cls === 'A' ? 'var(--green)' : cls === 'B' ? 'var(--yellow)' : 'var(--text-muted)';
+  const locCount = locs.filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode)).length;
+
+  // Active locs (stock > 0), sorted by stockQty desc
+  const activeLocs = [...locs]
+    .filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode))
+    .sort((a,b) => b.stockQuantity - a.stockQuantity);
+  const zeroLocs   = locs.filter(l => (l.stockQuantity||0) === 0 && isAllowedLocation(l.locationCode));
+
+  // Lots sorted by expiredDate asc
+  const activeLots = [...lots].filter(l => (l.availableQuantity||0) > 0).sort((a,b) => new Date(a.expiredTime) - new Date(b.expiredTime));
+
+  const now = new Date();
+  function expClass(expStr) {
+    if (!expStr) return '';
+    const diff = (new Date(expStr) - now) / (1000*60*60*24);
+    return diff < 90 ? 'exp-warn' : 'exp-ok';
+  }
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="stat-row">
+      <div class="stat-chip"><div class="sv" style="color:var(--green)">${Number(sd.availableQuantity||0).toLocaleString()}</div><div class="sl">Có sẵn</div></div>
+      <div class="stat-chip"><div class="sv" style="color:var(--yellow)">${Number(sd.onHoldQuantity||0).toLocaleString()}</div><div class="sl">Đang giữ</div></div>
+      <div class="stat-chip"><div class="sv">${locCount}</div><div class="sl">Kệ có hàng</div></div>
+      <div class="stat-chip"><div class="sv" style="color:${clsColor}">${cls}</div><div class="sl">Phân loại</div></div>
+    </div>
+
+    <div class="modal-section-title">📦 Vị trí kệ có hàng (${activeLocs.length})</div>
+    ${activeLocs.length ? `
+    <table class="loc-table">
+      <thead><tr><th>Kệ</th><th>Tồn kho</th><th>Có sẵn</th><th>Giữ</th><th>Trạng thái</th><th></th></tr></thead>
+      <tbody>${activeLocs.map(l => `<tr>
+        <td><span class="badge-loc">${l.locationCode}</span></td>
+        <td><b>${(l.stockQuantity||0).toLocaleString()}</b></td>
+        <td style="color:var(--green)">${(l.availableQuantity||0).toLocaleString()}</td>
+        <td style="color:var(--yellow)">${(l.onHoldQuantity||0).toLocaleString()}</td>
+        <td><span class="badge-status">${l.status||'—'}</span></td>
+        <td><button class="copy-btn" onclick="copyLoc(this,'${l.locationCode}')">📋</button></td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div style="color:var(--text-muted);font-size:13px">Không có kệ nào có hàng</div>'}
+
+
+
+    <div class="modal-section-title">🗓️ Lot / Hạn sử dụng (${activeLots.length} lot còn hàng)</div>
+    ${activeLots.length ? `
+    <table class="lot-table">
+      <thead><tr><th>Lot</th><th>HSD</th><th>Nhập</th><th>Xuất</th><th>Có sẵn</th></tr></thead>
+      <tbody>${activeLots.slice(0,20).map(l => `<tr>
+        <td><b>${l.lot||'—'}</b></td>
+        <td class="${expClass(l.expiredTime)}">${l.expiredDate||'—'}</td>
+        <td>${(l.inQuantity||0).toLocaleString()}</td>
+        <td>${(l.outQuantity||0).toLocaleString()}</td>
+        <td style="color:var(--green)"><b>${(l.availableQuantity||0).toLocaleString()}</b></td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div style="color:var(--text-muted);font-size:13px">Không có lot còn hàng</div>'}
+
+    <div class="modal-section-title">🕒 Lịch sử gán vị trí (Gần đây)</div>
+    ${histories.length ? `
+    <table class="lot-table">
+      <thead><tr><th>Thời gian</th><th>User / Hành động</th><th>Vị trí</th></tr></thead>
+      <tbody>${histories.slice(0,10).map(h => {
+        let skuName = (h.data && h.data.sku) || h.primaryKey || '';
+        let actionName = 'Thao tác';
+        if (h.templateCode === 'wms-mapping-sku-delete') {
+          actionName = 'Đã gỡ mapping';
+        } else if (h.templateCode === 'wms-mapping-sku') {
+          actionName = 'Đã mapping';
+        } else {
+          let rawAction = h.name || (h.data && h.data.type) || h.action || h.type || 'Thao tác';
+          actionName = (rawAction === 'MAPPING') ? 'Đã mapping' : (rawAction === 'UNMAPPING' ? 'Đã gỡ mapping' : rawAction);
+        }
+        
+        let loc = (h.data && h.data.locationCode) || h.locationCode || h.location || h.code;
+        if (!loc && h.dictionary && h.dictionary.locationCode) loc = h.dictionary.locationCode;
+        if (!loc) loc = '—';
+        
+        let user = h.fullname || h.createdBy || h.username || h.user;
+        if (!user && h.account) user = h.account.username || h.account.name || h.accountId;
+        if (!user) user = 'Hệ thống';
+
+        let dateStr = h.createdTime || h.createdAt;
+        let formattedDate = '—';
+        if (dateStr) {
+          let d = new Date(dateStr);
+          formattedDate = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        }
+
+        return `<tr>
+          <td style="white-space:nowrap">${formattedDate}</td>
+          <td><b>${user}</b><br><small style="color:var(--text-muted)">${actionName}</small></td>
+          <td><span class="badge-loc">${loc}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>` : '<div style="color:var(--text-muted);font-size:13px">Dữ liệu lịch sử không có sẵn.</div>'}
+  `;
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('detailModal')) closeModalBtn();
+}
+function closeModalBtn() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalBtn(); });
+</script>
+</body>
+</html>

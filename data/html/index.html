@@ -5,8 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trợ Lý Kho Hàng Thuocsi</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PapaParse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Boxicons for icons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 
@@ -39,11 +43,11 @@
                     <i class='bx bx-shield-quarter'></i>
                     <span>Đối Soát</span>
                 </a>
-                <a href="wh-wms/mapping.html" class="nav-link">
+                <a href="../WH-WMS/WMS.html" class="nav-link">
                     <i class='bx bx-building-house'></i>
                     <span>WMS</span>
                 </a>
-                <a href="main/loacation.html" class="nav-link">
+                <a href="../WH-main/buymed-search.html" class="nav-link" style="color: var(--primary); border-color: var(--primary-glow);">
                     <i class='bx bx-search-alt-2'></i>
                     <span>Tra cứu nhanh</span>
                 </a>
@@ -80,21 +84,8 @@
             </form>
         </footer>
     </div>
-    <!-- SKU DETAIL MODAL -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal-box">
-            <button class="modal-close" id="modalCloseBtn"><i class='bx bx-x'></i></button>
-            <div class="modal-header" id="modalHeader">
-                <!-- Header content injected by JS -->
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Body content injected by JS -->
-            </div>
-        </div>
-    </div>
-
-    <script src="assets/js/script-sync.js"></script>
-    <script src="assets/js/script.js"></script>
+    <script src="script-sync.js"></script>
+    <script src="script.js"></script>
     <div id="statusBanner" style="display:none;">
         <div class="banner loading" id="bannerInner">
             <i class='bx bx-loader-alt bx-spin'></i>

@@ -225,6 +225,10 @@ function setLoadingState(isLoading) {
 // ============================================================
 // Hiển thị tin nhắn
 // ============================================================
+function updateSystemMessage(text) {
+    addBotMessage(text);
+}
+
 function addUserMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user-message';
@@ -241,13 +245,7 @@ function addBotMessage(htmlContent) {
     scrollToBottom();
 }
 
-window.copyLoc = function(btn, text) {
-    navigator.clipboard.writeText(text).then(() => {
-        const old = btn.innerHTML;
-        btn.innerHTML = '<i class=\'bx bx-check\' style=\'color:#34D399\'></i>';
-        setTimeout(() => btn.innerHTML = old, 1500);
-    });
-};
+// ============================================================
 // Tìm kiếm sản phẩm (tìm theo SKU & tên, bỏ dấu)
 // ============================================================
 function normalize(str) {
@@ -328,12 +326,10 @@ function hideTyping() {
 // ============================================================
 // Render kết quả sản phẩm
 // ============================================================
-let currentResults = [];
-
 function renderResults(results) {
-    currentResults = results;
     let html = '';
-    results.forEach((item, idx) => {
+    results.forEach(item => {
+        // Tự động tìm key phù hợp (không phân biệt hoa/thường)
         const getVal = (keywords) => {
             const key = Object.keys(item).find(k => keywords.some(kw => k.toUpperCase().includes(kw)));
             return key ? item[key] : '';
@@ -352,20 +348,21 @@ function renderResults(results) {
         const keDisplay = ke && ke !== '#N/A' && ke.trim() !== '' ? ke : 'Chưa xếp kệ';
         const stockNum = parseInt(tonKho) || 0;
         const stockColor = stockNum <= 0 ? '#F87171' : (stockNum <= 10 ? '#FCD34D' : '#34D399');
+        
+        // Fields for additional details section
+        const maSeller = getVal(['MÃ SELLER', 'MA SELLER', 'SELLER', 'VENDOR']);
+        const nhom = getVal(['NHÓM', 'NHOM', 'CATEGORY', 'GROUP']);
+        const adminId = getVal(['ADMIN ID', 'ADMIN', 'OWNER']);
+        const choNhap = getVal(['CHỜ NHẬP', 'CHO NHAP', 'PENDING', 'DUE']);
 
         html += `
-        <div class="product-card clickable" onclick="openModalFromList(${idx})">
+        <div class="product-card">
             <div class="product-card-header">
                 <img src="${escapeHTML(hinhAnh)}" alt="${escapeHTML(tenSp)}" class="product-img"
                      onerror="this.src='https://placehold.co/80x80/030712/6366F1?text=Error'">
                 <div style="flex:1;">
                     <h3 class="product-title">${escapeHTML(tenSp)}</h3>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="product-sku">${escapeHTML(sku)}</span>
-                        <span style="font-size:10px; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-                            <i class='bx bx-zoom-in'></i> Chi tiết
-                        </span>
-                    </div>
+                    <span class="product-sku">${escapeHTML(sku)}</span>
                 </div>
             </div>
             <div class="product-info-grid">
@@ -384,7 +381,30 @@ function renderResults(results) {
                 <div class="info-item" style="grid-column: span 2;">
                     <span class="info-label">Quy Cách Sản Phẩm</span>
                     <div style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">
-                        ${escapeHTML(quyCach) || '—'}
+                        ${escapeHTML(quyCach) || 'N/A'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Details Section -->
+            <div class="extra-details">
+                <span class="extra-title">Chi tiết bổ sung</span>
+                <div class="detail-list">
+                    <div class="detail-row">
+                        <span class="detail-label">Mã seller</span>
+                        <span class="detail-value">${escapeHTML(maSeller) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Nhóm</span>
+                        <span class="detail-value">${escapeHTML(nhom) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Admin ID</span>
+                        <span class="detail-value">${escapeHTML(adminId) || '—'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Chờ nhập</span>
+                        <span class="detail-value" style="color:#FCD34D;">${escapeHTML(choNhap) || '—'}</span>
                     </div>
                 </div>
             </div>
@@ -393,195 +413,16 @@ function renderResults(results) {
     addBotMessage(html);
 }
 
-window.openModalFromList = function(idx) {
-    const item = currentResults[idx];
-    if (!item) return;
-    const getVal = (keywords) => {
-        const key = Object.keys(item).find(k => keywords.some(kw => k.toUpperCase().includes(kw)));
-        return key ? item[key] : '';
-    };
-    const sku = (getVal(['MÃ SKU', 'MA SKU', 'SKU']) || '').trim();
-    const name = getVal(['TÊN SẢN PHẨM', 'TEN SAN PHAM', 'SẢN PHẨM', 'SAN PHAM', 'PRODUCT']);
-    openModal(sku, name, item);
-};
-
 // ============================================================
-// MODAL LOGIC (WMS Detail)
+// Tiện ích
 // ============================================================
-const modalOverlay = document.getElementById('modalOverlay');
-const modalCloseBtn = document.getElementById('modalCloseBtn');
-const modalHeader = document.getElementById('modalHeader');
-const modalBody = document.getElementById('modalBody');
-
-async function openModal(sku, itemName, itemData) {
-    if (!sku && !itemName) return;
-
-    modalOverlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    
-    renderModalContent(itemName, sku, itemData, null, null);
-
-    if (sku) {
-        try {
-            const [detailRes, historyRes] = await Promise.all([
-                fetch(`http://localhost:3000/wms/sku-detail?sku=${encodeURIComponent(sku)}&group=BUYMED&warehouse=HN`).catch(() => null),
-                fetch(`http://localhost:3000/wms/mapping-history?sku=${encodeURIComponent(sku)}`).catch(() => null)
-            ]);
-
-            let wmsData = null;
-            let histories = [];
-
-            if (detailRes && detailRes.ok) {
-                const detailJson = await detailRes.json();
-                if (detailJson.ok) wmsData = detailJson;
-            }
-
-            if (historyRes && historyRes.ok) {
-                const historyJson = await historyRes.json();
-                histories = historyJson.data || [];
-            }
-
-            renderModalContent(itemName, sku, itemData, histories, wmsData);
-        } catch (e) {
-            console.error("Fetch SKU info error", e);
-            renderModalContent(itemName, sku, itemData, [], null);
-        }
-    } else {
-        renderModalContent(itemName, sku, itemData, [], null);
-    }
-}
-
-function renderModalContent(name, sku, item, histories, wmsData) {
-    const formatN = (num) => {
-        if (num === undefined || num === null || num === '') return '0';
-        return parseFloat(num.toString().replace(/,/g,'')).toLocaleString('vi-VN');
-    };
-
-    const getFieldVal = (keywords) => {
-        const key = Object.keys(item).find(k => keywords.some(kw => k.toUpperCase().includes(kw)));
-        return key ? item[key] : '';
-    };
-
-    const tonKho = getFieldVal(['TỒN VẬT LÝ', 'TON VAT LY', 'TỒN KHO', 'TON KHO', 'STOCK']);
-    const imgRaw = getFieldVal(['HÌNH ẢNH', 'HINH ANH', 'IMAGE', 'IMG']);
-    const img = imgRaw && imgRaw !== '#N/A' && imgRaw.trim() !== '' ? imgRaw : 'https://placehold.co/80x80/030712/6366F1?text=?';
-    let wmsStatsHTML = '';
-    let wmsLocsHTML = '';
-    let wmsLotsHTML = '';
-    let typeTag = '';
-
-    if (wmsData === null && histories === null) {
-        wmsStatsHTML = `<div class="banner loading"><i class='bx bx-loader-alt bx-spin'></i><span>Đang đồng bộ dữ liệu từ WMS...</span></div>`;
-    } else if (wmsData) {
-        const sd = wmsData.skuData || {};
-        const locs = wmsData.skuLocations || [];
-        const lots = wmsData.skuLotDate || [];
-        
-        const locWithStock = locs.filter(l => (l.stockQuantity||0) > 0).length;
-        const typeMap = { 'DRUG': 'Thuốc', 'SUPPLEMENT': 'TPCN', 'COSMETIC': 'Mỹ phẩm', 'MEDICAL_DEVICE': 'Vật tư', 'EQUIPMENT': 'Thiết bị' };
-        const typeText = typeMap[sd.productType] || sd.productType || 'SP';
-        typeTag = `<div class="modal-sku-tag">${typeText}</div>`;
-
-        wmsStatsHTML = `
-            <div class="modal-key-fields" style="grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:0;">
-                <div class="modal-key-card" style="padding:16px 8px;">
-                    <div class="modal-key-value" style="font-size:1.5rem; color:#34D399;">${formatN(sd.availableQuantity)}</div>
-                    <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">CÓ SẴN (WMS)</div>
-                </div>
-                <div class="modal-key-card" style="padding:16px 8px;">
-                    <div class="modal-key-value" style="font-size:1.5rem; color:#FCD34D;">${formatN(sd.onHoldQuantity)}</div>
-                    <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">ĐANG GIỮ</div>
-                </div>
-                <div class="modal-key-card" style="padding:16px 8px;">
-                    <div class="modal-key-value" style="font-size:1.5rem; color:#818CF8;">${locWithStock}</div>
-                    <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">KỆ CÓ HÀNG</div>
-                </div>
-                <div class="modal-key-card" style="padding:16px 8px;">
-                    <div class="modal-key-value" style="font-size:1.5rem; color:#A78BFA;">${sd.classification || '—'}</div>
-                    <div class="modal-key-label" style="font-size:0.6rem; margin-top:8px;">PHÂN LOẠI</div>
-                </div>
-            </div>`;
-
-        const activeLocs = locs.filter(l => (l.stockQuantity||0) > 0).sort((a,b) => b.stockQuantity - a.stockQuantity);
-        if (activeLocs.length > 0) {
-            wmsLocsHTML = `
-            <div style="margin-top:24px;">
-                <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
-                    <i class='bx bx-package' style="color:#F59E0B"></i> VỊ TRÍ KỆ CÓ HÀNG (${activeLocs.length})
-                </div>
-                <table class="modal-table-premium">
-                    <thead><tr><th style="text-align:left;">Kệ</th><th style="text-align:center;">Tồn kho</th><th style="text-align:center;">Có sẵn</th><th style="text-align:center;">Giữ</th></tr></thead>
-                    <tbody>${activeLocs.map(l => `<tr>
-                        <td><span class="badge-shelf" style="font-size:0.7rem;">${l.locationCode}</span></td>
-                        <td style="text-align:center; font-weight:700;">${formatN(l.stockQuantity)}</td>
-                        <td style="text-align:center; color:#34D399; font-weight:700;">${formatN(l.availableQuantity)}</td>
-                        <td style="text-align:center; color:#FCD34D; font-weight:700;">${formatN(l.onHoldQuantity)}</td>
-                    </tr>`).join('')}</tbody>
-                </table>
-            </div>`;
-        }
-
-        const activeLots = lots.filter(l => (l.availableQuantity||0) > 0).sort((a,b) => new Date(a.expiredTime) - new Date(b.expiredTime));
-        if (activeLots.length > 0) {
-            wmsLotsHTML = `
-            <div style="margin-top:24px;">
-                <div style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
-                    <i class='bx bx-calendar' style="color:#F87171"></i> LOT / HẠN SỬ DỤNG (${activeLots.length} lot còn hàng)
-                </div>
-                <table class="modal-table-premium">
-                    <thead><tr><th style="text-align:left;">Lot</th><th style="text-align:center;">HSD</th><th style="text-align:center;">Nhập</th><th style="text-align:center;">Xuất</th></tr></thead>
-                    <tbody>${activeLots.slice(0, 10).map(l => `<tr>
-                        <td><strong style="color:#fff;">${l.lot||'—'}</strong></td>
-                        <td style="text-align:center; color:#34D399;">${l.expiredDate||'—'}</td>
-                        <td style="text-align:center;">${formatN(l.inQuantity)}</td>
-                        <td style="text-align:center;">${formatN(l.outQuantity)}</td>
-                    </tr>`).join('')}</tbody>
-                </table>
-            </div>`;
-        }
-    }
-
-    let historyHTML = '';
-    if (histories && histories.length > 0) {
-        historyHTML = `
-        </table>`;
-    }
-
-    modalBody.innerHTML = `
-        <div class="stat-chip-container">
-            <div class="stat-chip" style="background:var(--primary)11; border-color:var(--primary)33;">
-                <div class="stat-chip-val" style="color:var(--primary);">${escapeHTML(getFieldVal(['KỆ', 'KE', 'VỊ TRÍ', 'VI TRI'])) || '—'}</div>
-                <div class="stat-chip-lbl">Kệ (Sheet)</div>
-            </div>
-            <div class="stat-chip" style="background:#10B98111; border-color:#10B98133;">
-                <div class="stat-chip-val" style="color:#10B981;">${formatN(tonKho)}</div>
-                <div class="stat-chip-lbl">Tồn (Sheet)</div>
-            </div>
-        </div>
-        ${wmsStatsHTML}
-        ${wmsLocsHTML}
-        ${wmsLotsHTML}
-        ${historyHTML}
-        <div class="modal-section-title">Dữ liệu từ Google Sheet</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">${otherHtml}</div>
-    `;
-}
-
-function closeModal() {
-    modalOverlay.classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-modalCloseBtn.onclick = closeModal;
-modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
 function scrollToBottom() {
     setTimeout(() => {
         chatBody.scrollTop = chatBody.scrollHeight;
     }, 50);
 }
 
+// Nút làm mới dữ liệu
 refreshDataBtn.addEventListener('click', () => {
     inventoryData = [];
     chatBody.innerHTML = '';
@@ -589,8 +430,7 @@ refreshDataBtn.addEventListener('click', () => {
     fetchInventoryData();
 });
 
-function init() {
-    fetchInventoryData();
-}
-
+// ============================================================
+// Bắt đầu
+// ============================================================
 init();

@@ -511,13 +511,215 @@ function openModal(idx) {
             <div class="extra-line"></div>
             <span class="extra-val">${loc}</span>
         </div>
-    </div>`;
+    </div>
+    
+    <div id="wmsDetailSection"></div>`;
 
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    const skuCode = getSKU(item);
+    if (skuCode) fetchWMSDetail(skuCode);
 }
 
 function closeModal() { modalOverlay.classList.remove('active'); document.body.style.overflow = ''; }
+
+async function fetchWMSDetail(sku) {
+  const wmsDiv = document.getElementById('wmsDetailSection');
+  if (!wmsDiv) return;
+  wmsDiv.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class='bx bx-loader-alt bx-spin' style="font-size:24px; vertical-align:middle;"></i> Đang tải dữ liệu WMS từ Proxy...</div>`;
+  
+  try {
+    const PROXY_URL = 'http://localhost:3000';
+    const group = 'BUYMED';
+    const warehouse = 'HN';
+    const [r, histRes] = await Promise.all([
+      fetch(`${PROXY_URL}/wms/sku-detail?sku=${encodeURIComponent(sku)}&group=${group}&warehouse=${warehouse}`),
+      fetch(`${PROXY_URL}/wms/mapping-history?sku=${encodeURIComponent(sku)}`).catch(() => null)
+    ]);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.message || "Lỗi tải dữ liệu");
+    
+    if (histRes && histRes.ok) {
+      const histData = await histRes.json();
+      d.mappingHistoryData = histData.data || [];
+    }
+    
+    renderWMSDetail(sku, d);
+  } catch(e) {
+    wmsDiv.innerHTML = `<div style="color:#ef4444; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 16px; font-size:13px; margin-top:20px;">❌ Không tải được dữ liệu WMS: ${e.message}<br><small style="color:var(--text-muted); display:block; margin-top:6px;">Vui lòng mở tab <b>Tra cứu vị trí WMS</b> và bật Proxy Server, hoặc kiểm tra lại Token của bạn.</small></div>`;
+  }
+}
+
+function renderWMSDetail(sku, d) {
+  const wmsDiv = document.getElementById('wmsDetailSection');
+  if (!wmsDiv) return;
+
+  const sd   = d.skuData || {};
+  const locs = d.skuLocations || [];
+  const lots = d.skuLotDate || [];
+  const histories = d.mappingHistoryData || d.mappingHistory || d.histories || d.skuHistories || [];
+  
+  const cls   = sd.classification || '—';
+  const clsColor = cls === 'A' ? '#10B981' : cls === 'B' ? '#F59E0B' : '#9CA3AF';
+  
+  function isAllowedLocation(code) {
+    if (!code) return false;
+    const upper = code.toUpperCase();
+    return upper.startsWith('I1A') || upper.startsWith('WH-LOST') || upper.startsWith('WH-MISSING');
+  }
+  const locCount = locs.filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode)).length;
+
+  const isDrug = sd.productType && sd.productType.includes('DRUG');
+  const typeLabel = isDrug ? 'Thuốc' : 'Thường';
+  const typeColor = isDrug ? '#F59E0B' : '#9CA3AF';
+
+  const activeLocs = [...locs]
+    .filter(l => (l.stockQuantity||0) > 0 && isAllowedLocation(l.locationCode))
+    .sort((a,b) => b.stockQuantity - a.stockQuantity);
+
+  const activeLots = [...lots].filter(l => (l.availableQuantity||0) > 0).sort((a,b) => new Date(a.expiredTime) - new Date(b.expiredTime));
+
+  const now = new Date();
+  function expColor(expStr) {
+    if (!expStr) return '';
+    const diff = (new Date(expStr) - now) / (1000*60*60*24);
+    return diff < 90 ? '#F59E0B' : '#10B981';
+  }
+
+  let html = `
+    <div style="margin-top:24px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+            <div style="background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; text-align:center; min-width:80px; flex:1;">
+                <div style="font-size:18px; font-weight:800; color:#10B981">${Number(sd.availableQuantity||0).toLocaleString()}</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">Có sẵn</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; text-align:center; min-width:80px; flex:1;">
+                <div style="font-size:18px; font-weight:800; color:#F59E0B">${Number(sd.onHoldQuantity||0).toLocaleString()}</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">Đang giữ</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; text-align:center; min-width:80px; flex:1;">
+                <div style="font-size:18px; font-weight:800; color:#fff">${locCount}</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">Kệ có hàng</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; text-align:center; min-width:80px; flex:1;">
+                <div style="font-size:18px; font-weight:800; color:${clsColor}">${cls}</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">Phân loại</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; text-align:center; min-width:80px; flex:1;">
+                <div style="font-size:15px; font-weight:800; color:${typeColor}; margin-top:2px;">${typeLabel}</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">Loại SP</div>
+            </div>
+        </div>
+
+        <div style="font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9CA3AF; margin-bottom:12px; margin-top:24px; display:flex; align-items:center; gap:6px;">
+            <i class='bx bx-package' style="font-size:16px;"></i> Vị trí kệ có hàng (${activeLocs.length})
+        </div>
+  `;
+
+  if (activeLocs.length) {
+    html += `
+        <div style="background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+            <table style="width:100%; min-width:auto; border-collapse:collapse; font-size:13px; font-family:var(--font-display);">
+                <thead><tr style="background: rgba(255,255,255,0.02);">
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Kệ</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Tồn kho</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Có sẵn</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Giữ</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Trạng thái</th>
+                </tr></thead>
+                <tbody>${activeLocs.map(l => `<tr>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <span style="display:inline-block; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10B981; border-radius:6px; padding:3px 10px; font-family:monospace; font-weight:700;">${l.locationCode}</span>
+                    </td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-weight:600;">${(l.stockQuantity||0).toLocaleString()}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#10B981; font-weight:600;">${(l.availableQuantity||0).toLocaleString()}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#F59E0B; font-weight:600;">${(l.onHoldQuantity||0).toLocaleString()}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05);"><span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(37,99,235,0.15); border:1px solid rgba(37,99,235,0.3); color:#60a5fa;">${l.status||'—'}</span></td>
+                </tr>`).join('')}</tbody>
+            </table>
+        </div>`;
+  } else {
+    html += '<div style="color:#9CA3AF; font-size:13px; font-style:italic; padding-left:4px;">Không có kệ nào có hàng</div>';
+  }
+
+  html += `<div style="font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9CA3AF; margin-bottom:12px; margin-top:28px; display:flex; align-items:center; gap:6px;"><i class='bx bx-calendar-event' style="font-size:16px;"></i> Lot / Hạn sử dụng (${activeLots.length} lot còn hàng)</div>`;
+  
+  if (activeLots.length) {
+    html += `
+        <div style="background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+            <table style="width:100%; min-width:auto; border-collapse:collapse; font-size:13px; font-family:var(--font-display);">
+                <thead><tr style="background: rgba(255,255,255,0.02);">
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Lot</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">HSD</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Nhập</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Xuất</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Có sẵn</th>
+                </tr></thead>
+                <tbody>${activeLots.slice(0,20).map(l => `<tr>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-weight:600;">${l.lot||'—'}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:${expColor(l.expiredTime)}; font-weight:500;">${l.expiredDate||'—'}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#D1D5DB;">${(l.inQuantity||0).toLocaleString()}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#D1D5DB;">${(l.outQuantity||0).toLocaleString()}</td>
+                    <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#10B981; font-weight:600;">${(l.availableQuantity||0).toLocaleString()}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+        </div>`;
+  } else {
+    html += '<div style="color:#9CA3AF; font-size:13px; font-style:italic; padding-left:4px;">Không có lot còn hàng</div>';
+  }
+
+  html += `<div style="font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#9CA3AF; margin-bottom:12px; margin-top:28px; display:flex; align-items:center; gap:6px;"><i class='bx bx-history' style="font-size:16px;"></i> Lịch sử gán vị trí (Gần đây)</div>`;
+  
+  if (histories.length) {
+    html += `
+        <div style="background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+            <table style="width:100%; min-width:auto; border-collapse:collapse; font-size:13px; font-family:var(--font-display);">
+                <thead><tr style="background: rgba(255,255,255,0.02);">
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Thời gian</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">User / Hành động</th>
+                    <th style="text-align:left; padding:10px 14px; color:#9CA3AF; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">Vị trí</th>
+                </tr></thead>
+                <tbody>${histories.slice(0,10).map(h => {
+                    let actionName = 'Thao tác';
+                    if (h.templateCode === 'wms-mapping-sku-delete') actionName = 'Đã gỡ mapping';
+                    else if (h.templateCode === 'wms-mapping-sku') actionName = 'Đã mapping';
+                    else {
+                        let rawAction = h.name || (h.data && h.data.type) || h.action || h.type || 'Thao tác';
+                        actionName = (rawAction === 'MAPPING') ? 'Đã mapping' : (rawAction === 'UNMAPPING' ? 'Đã gỡ mapping' : rawAction);
+                    }
+                    
+                    let loc = (h.data && h.data.locationCode) || h.locationCode || h.location || h.code;
+                    if (!loc && h.dictionary && h.dictionary.locationCode) loc = h.dictionary.locationCode;
+                    if (!loc) loc = '—';
+                    
+                    let user = h.fullname || h.createdBy || h.username || h.user;
+                    if (!user && h.account) user = h.account.username || h.account.name || h.accountId;
+                    if (!user) user = 'Hệ thống';
+
+                    let dateStr = h.createdTime || h.createdAt;
+                    let formattedDate = '—';
+                    if (dateStr) {
+                        let d = new Date(dateStr);
+                        formattedDate = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                    }
+
+                    return `<tr>
+                        <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); white-space:nowrap; color:#D1D5DB; font-family:var(--font-mono); font-size:12px;">${formattedDate}</td>
+                        <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff; font-weight:500;">${user}<br><small style="color:#9CA3AF; font-weight:400; font-family:var(--font-sans); margin-top:2px; display:inline-block;">${actionName}</small></td>
+                        <td style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05);"><span style="display:inline-block; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10B981; border-radius:6px; padding:3px 10px; font-family:monospace; font-weight:700;">${loc}</span></td>
+                    </tr>`;
+                }).join('')}</tbody>
+            </table>
+        </div>`;
+  } else {
+    html += '<div style="color:#9CA3AF; font-size:13px; font-style:italic; padding-left:4px;">Dữ liệu lịch sử không có sẵn.</div>';
+  }
+
+  html += `</div>`;
+  wmsDiv.innerHTML = html;
+}
+
 
 modalCloseBtn.onclick = closeModal;
 modalOverlay.onclick = (e) => { if(e.target === modalOverlay) closeModal(); };
